@@ -13,6 +13,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as FarmerRouteImport } from './routes/farmer'
 import { Route as FarmerIndexRouteImport } from './routes/farmer.index'
 import { Route as FarmerCropRouteImport } from './routes/farmer.crop'
+import { Route as FarmerProcurementRouteImport } from './routes/farmer.procurement'
+import { Route as FarmerSlotRouteImport } from './routes/farmer.slot'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,16 +36,30 @@ const FarmerCropRoute = FarmerCropRouteImport.update({
   path: '/crop',
   getParentRoute: () => FarmerRoute,
 } as any)
+const FarmerProcurementRoute = FarmerProcurementRouteImport.update({
+  id: '/procurement',
+  path: '/procurement',
+  getParentRoute: () => FarmerRoute,
+} as any)
+const FarmerSlotRoute = FarmerSlotRouteImport.update({
+  id: '/slot',
+  path: '/slot',
+  getParentRoute: () => FarmerRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/farmer': typeof FarmerRouteWithChildren
   '/farmer/crop': typeof FarmerCropRoute
+  '/farmer/procurement': typeof FarmerProcurementRoute
+  '/farmer/slot': typeof FarmerSlotRoute
   '/farmer/': typeof FarmerIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/farmer/crop': typeof FarmerCropRoute
+  '/farmer/procurement': typeof FarmerProcurementRoute
+  '/farmer/slot': typeof FarmerSlotRoute
   '/farmer': typeof FarmerIndexRoute
 }
 export interface FileRoutesById {
@@ -51,14 +67,29 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/farmer': typeof FarmerRouteWithChildren
   '/farmer/crop': typeof FarmerCropRoute
+  '/farmer/procurement': typeof FarmerProcurementRoute
+  '/farmer/slot': typeof FarmerSlotRoute
   '/farmer/': typeof FarmerIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/farmer' | '/farmer/crop' | '/farmer/'
+  fullPaths:
+    | '/'
+    | '/farmer'
+    | '/farmer/crop'
+    | '/farmer/procurement'
+    | '/farmer/slot'
+    | '/farmer/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/farmer/crop' | '/farmer'
-  id: '__root__' | '/' | '/farmer' | '/farmer/crop' | '/farmer/'
+  to: '/' | '/farmer/crop' | '/farmer/procurement' | '/farmer/slot' | '/farmer'
+  id:
+    | '__root__'
+    | '/'
+    | '/farmer'
+    | '/farmer/crop'
+    | '/farmer/procurement'
+    | '/farmer/slot'
+    | '/farmer/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -96,16 +127,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FarmerCropRouteImport
       parentRoute: typeof FarmerRoute
     }
+    '/farmer/procurement': {
+      id: '/farmer/procurement'
+      path: '/procurement'
+      fullPath: '/farmer/procurement'
+      preLoaderRoute: typeof FarmerProcurementRouteImport
+      parentRoute: typeof FarmerRoute
+    }
+    '/farmer/slot': {
+      id: '/farmer/slot'
+      path: '/slot'
+      fullPath: '/farmer/slot'
+      preLoaderRoute: typeof FarmerSlotRouteImport
+      parentRoute: typeof FarmerRoute
+    }
   }
 }
 
 interface FarmerRouteChildren {
   FarmerCropRoute: typeof FarmerCropRoute
+  FarmerProcurementRoute: typeof FarmerProcurementRoute
+  FarmerSlotRoute: typeof FarmerSlotRoute
   FarmerIndexRoute: typeof FarmerIndexRoute
 }
 
 const FarmerRouteChildren: FarmerRouteChildren = {
   FarmerCropRoute: FarmerCropRoute,
+  FarmerProcurementRoute: FarmerProcurementRoute,
+  FarmerSlotRoute: FarmerSlotRoute,
   FarmerIndexRoute: FarmerIndexRoute,
 }
 
