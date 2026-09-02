@@ -1,6 +1,6 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-  centres as baseCentres,
+  centres as fallbackCentres,
   initialCrops,
   initialNotifications,
   journeySteps,
@@ -9,7 +9,7 @@ import {
   type ProcurementCentre,
 } from "@/data/mockData";
 import { notificationService } from "@/services/notificationService";
-import { statusFromLoad } from "@/services/mandiService";
+import { mandiService, statusFromLoad } from "@/services/mandiService";
 
 export type ScenarioId = "overload" | "weather" | "vehicle" | "queue" | "alternative";
 
@@ -58,7 +58,12 @@ function nowLabel() {
 export function DemoProvider({ children }: { children: ReactNode }) {
   const [demoMode, setDemoMode] = useState(false);
   const [activeScenarios, setActiveScenarios] = useState<ScenarioId[]>([]);
+  const [sourceCentres, setSourceCentres] = useState<ProcurementCentre[]>(fallbackCentres);
   const [loadOverrides, setLoadOverrides] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    void mandiService.listCentres().then(setSourceCentres);
+  }, []);
   const [booking, setBooking] = useState<Booking>({ centreId: "mandi-a", slot: "11:30 AM", status: "Confirmed" });
   const [crops, setCrops] = useState<Crop[]>(initialCrops);
   const [queue, setQueue] = useState({
@@ -73,9 +78,9 @@ export function DemoProvider({ children }: { children: ReactNode }) {
 
   const centres = useMemo(
     () =>
-      baseCentres.map((c) => {
+      sourceCentres.map((c) => {
         const load = loadOverrides[c.id] ?? c.loadPercent;
-        const factor = load / c.loadPercent;
+        const factor = load / Math.max(c.loadPercent, 1);
         return {
           ...c,
           loadPercent: load,
@@ -84,7 +89,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
           farmersWaiting: Math.round(c.farmersWaiting * factor),
         };
       }),
-    [loadOverrides],
+    [loadOverrides, sourceCentres],
   );
 
   const pushNotification = useCallback((n: AppNotification) => {

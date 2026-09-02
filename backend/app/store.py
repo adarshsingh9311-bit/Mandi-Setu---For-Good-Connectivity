@@ -1,0 +1,144 @@
+from copy import deepcopy
+
+from .models import CentreStatus, ProcurementCentre
+
+# Seeded from the SIH prototype mock data. Later steps add persistence.
+
+_CENTRES: dict[str, ProcurementCentre] = {}
+
+
+def status_from_load(load: float) -> CentreStatus:
+    if load >= 120:
+        return "over"
+    if load >= 90:
+        return "high"
+    return "normal"
+
+
+def estimated_wait(farmers_waiting: int, active_counters: int, avg_processing_min: int) -> int:
+    return round((farmers_waiting / max(active_counters, 1)) * avg_processing_min)
+
+
+def seed_centres() -> None:
+    raw = [
+        {
+            "id": "mandi-a",
+            "name": "Mandi A — Meerut Krishi Upaj",
+            "district": "Meerut",
+            "state": "Uttar Pradesh",
+            "distanceKm": 18,
+            "crops": ["Wheat", "Mustard", "Gram"],
+            "capacityPerDay": 420,
+            "farmersWaiting": 18,
+            "activeCounters": 3,
+            "processingRatePerHour": 26,
+            "avgProcessingMin": 7,
+            "loadPercent": 82,
+            "estimatedWaitMin": 47,
+            "status": "high",
+            "lat": 28.98,
+            "lng": 77.7,
+        },
+        {
+            "id": "mandi-b",
+            "name": "Mandi B — Sardhana Centre",
+            "district": "Meerut",
+            "state": "Uttar Pradesh",
+            "distanceKm": 23,
+            "crops": ["Wheat", "Paddy", "Gram"],
+            "capacityPerDay": 380,
+            "farmersWaiting": 9,
+            "activeCounters": 4,
+            "processingRatePerHour": 31,
+            "avgProcessingMin": 6,
+            "loadPercent": 58,
+            "estimatedWaitMin": 42,
+            "status": "normal",
+            "lat": 29.14,
+            "lng": 77.6,
+        },
+        {
+            "id": "mandi-c",
+            "name": "Mandi C — Mawana Centre",
+            "district": "Meerut",
+            "state": "Uttar Pradesh",
+            "distanceKm": 12,
+            "crops": ["Wheat", "Sugarcane"],
+            "capacityPerDay": 300,
+            "farmersWaiting": 26,
+            "activeCounters": 2,
+            "processingRatePerHour": 19,
+            "avgProcessingMin": 9,
+            "loadPercent": 108,
+            "estimatedWaitMin": 95,
+            "status": "high",
+            "lat": 29.1,
+            "lng": 77.92,
+        },
+        {
+            "id": "mandi-d",
+            "name": "Mandi D — Baghpat Centre",
+            "district": "Baghpat",
+            "state": "Uttar Pradesh",
+            "distanceKm": 34,
+            "crops": ["Wheat", "Mustard"],
+            "capacityPerDay": 260,
+            "farmersWaiting": 6,
+            "activeCounters": 3,
+            "processingRatePerHour": 24,
+            "avgProcessingMin": 6,
+            "loadPercent": 48,
+            "estimatedWaitMin": 28,
+            "status": "normal",
+            "lat": 28.94,
+            "lng": 77.22,
+        },
+        {
+            "id": "mandi-e",
+            "name": "Mandi E — Hapur Centre",
+            "district": "Hapur",
+            "state": "Uttar Pradesh",
+            "distanceKm": 41,
+            "crops": ["Wheat", "Paddy", "Gram", "Mustard"],
+            "capacityPerDay": 450,
+            "farmersWaiting": 14,
+            "activeCounters": 4,
+            "processingRatePerHour": 29,
+            "avgProcessingMin": 7,
+            "loadPercent": 66,
+            "estimatedWaitMin": 38,
+            "status": "normal",
+            "lat": 28.73,
+            "lng": 77.78,
+        },
+    ]
+    _CENTRES.clear()
+    for item in raw:
+        centre = ProcurementCentre.model_validate(item)
+        centre.status = status_from_load(centre.loadPercent)
+        centre.estimatedWaitMin = estimated_wait(
+            centre.farmersWaiting, centre.activeCounters, centre.avgProcessingMin
+        )
+        _CENTRES[centre.id] = centre
+
+
+def list_centres() -> list[ProcurementCentre]:
+    return [deepcopy(c) for c in _CENTRES.values()]
+
+
+def get_centre(centre_id: str) -> ProcurementCentre | None:
+    centre = _CENTRES.get(centre_id)
+    return deepcopy(centre) if centre else None
+
+
+def rank_alternatives(exclude_id: str, crop: str) -> list[ProcurementCentre]:
+    ranked = [
+        deepcopy(c)
+        for c in _CENTRES.values()
+        if c.id != exclude_id and crop in c.crops
+    ]
+    ranked.sort(key=lambda c: c.estimatedWaitMin + c.distanceKm)
+    return ranked
+
+
+seed_centres()

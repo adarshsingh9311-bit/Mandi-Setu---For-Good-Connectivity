@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, ArrowRight, MapPin } from "lucide-react";
 import { toast } from "sonner";
@@ -29,11 +30,25 @@ function AlternativesPage() {
   const { centres, booking, setBooking, pushNotification } = useDemo();
   const navigate = useNavigate();
   const current = centres.find((c) => c.id === booking.centreId) ?? centres[0]!;
-  const ranked = mandiService
-    .rankAlternatives(current.id, "Wheat")
-    .map((c) => centres.find((x) => x.id === c.id) ?? c)
-    .sort((a, b) => a.estimatedWaitMin - b.estimatedWaitMin);
-  const best = ranked[0]!;
+  const [ranked, setRanked] = useState(() =>
+    mandiService
+      .rankAlternatives(current.id, "Wheat")
+      .map((c) => centres.find((x) => x.id === c.id) ?? c)
+      .sort((a, b) => a.estimatedWaitMin - b.estimatedWaitMin),
+  );
+
+  useEffect(() => {
+    void mandiService.listAlternatives(current.id, "Wheat").then((list) => {
+      setRanked(
+        list
+          .map((c) => centres.find((x) => x.id === c.id) ?? c)
+          .sort((a, b) => a.estimatedWaitMin - b.estimatedWaitMin),
+      );
+    });
+  }, [centres, current.id]);
+
+  const best = ranked[0];
+  if (!best) return null;
 
   const switchCentre = () => {
     setBooking({ centreId: best.id, slot: "12:15 PM", status: "Confirmed" });

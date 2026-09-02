@@ -22,3 +22,17 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+## Backend (step 1 — centres)
+
+The UI still works without the API (mock data fallback). To serve live centre data:
+
+```sh
+cd backend
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
+Optional frontend env: `VITE_API_URL=http://127.0.0.1:8000`
