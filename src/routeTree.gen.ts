@@ -11,13 +11,17 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FarmerRouteImport } from './routes/farmer'
+import { Route as OperatorRouteImport } from './routes/operator'
 import { Route as FarmerIndexRouteImport } from './routes/farmer.index'
 import { Route as FarmerAlternativesRouteImport } from './routes/farmer.alternatives'
 import { Route as FarmerCropRouteImport } from './routes/farmer.crop'
+import { Route as FarmerNotificationsRouteImport } from './routes/farmer.notifications'
 import { Route as FarmerProcurementRouteImport } from './routes/farmer.procurement'
+import { Route as FarmerProfileRouteImport } from './routes/farmer.profile'
 import { Route as FarmerQueueRouteImport } from './routes/farmer.queue'
 import { Route as FarmerReportDelayRouteImport } from './routes/farmer.report-delay'
 import { Route as FarmerSlotRouteImport } from './routes/farmer.slot'
+import { Route as FarmerTrackRouteImport } from './routes/farmer.track'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -27,6 +31,11 @@ const IndexRoute = IndexRouteImport.update({
 const FarmerRoute = FarmerRouteImport.update({
   id: '/farmer',
   path: '/farmer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OperatorRoute = OperatorRouteImport.update({
+  id: '/operator',
+  path: '/operator',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FarmerIndexRoute = FarmerIndexRouteImport.update({
@@ -44,9 +53,19 @@ const FarmerCropRoute = FarmerCropRouteImport.update({
   path: '/crop',
   getParentRoute: () => FarmerRoute,
 } as any)
+const FarmerNotificationsRoute = FarmerNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => FarmerRoute,
+} as any)
 const FarmerProcurementRoute = FarmerProcurementRouteImport.update({
   id: '/procurement',
   path: '/procurement',
+  getParentRoute: () => FarmerRoute,
+} as any)
+const FarmerProfileRoute = FarmerProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => FarmerRoute,
 } as any)
 const FarmerQueueRoute = FarmerQueueRouteImport.update({
@@ -64,38 +83,55 @@ const FarmerSlotRoute = FarmerSlotRouteImport.update({
   path: '/slot',
   getParentRoute: () => FarmerRoute,
 } as any)
+const FarmerTrackRoute = FarmerTrackRouteImport.update({
+  id: '/track',
+  path: '/track',
+  getParentRoute: () => FarmerRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/farmer': typeof FarmerRouteWithChildren
+  '/operator': typeof OperatorRoute
   '/farmer/alternatives': typeof FarmerAlternativesRoute
   '/farmer/crop': typeof FarmerCropRoute
+  '/farmer/notifications': typeof FarmerNotificationsRoute
   '/farmer/procurement': typeof FarmerProcurementRoute
+  '/farmer/profile': typeof FarmerProfileRoute
   '/farmer/queue': typeof FarmerQueueRoute
   '/farmer/report-delay': typeof FarmerReportDelayRoute
   '/farmer/slot': typeof FarmerSlotRoute
+  '/farmer/track': typeof FarmerTrackRoute
   '/farmer/': typeof FarmerIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/operator': typeof OperatorRoute
   '/farmer/alternatives': typeof FarmerAlternativesRoute
   '/farmer/crop': typeof FarmerCropRoute
+  '/farmer/notifications': typeof FarmerNotificationsRoute
   '/farmer/procurement': typeof FarmerProcurementRoute
+  '/farmer/profile': typeof FarmerProfileRoute
   '/farmer/queue': typeof FarmerQueueRoute
   '/farmer/report-delay': typeof FarmerReportDelayRoute
   '/farmer/slot': typeof FarmerSlotRoute
+  '/farmer/track': typeof FarmerTrackRoute
   '/farmer': typeof FarmerIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/farmer': typeof FarmerRouteWithChildren
+  '/operator': typeof OperatorRoute
   '/farmer/alternatives': typeof FarmerAlternativesRoute
   '/farmer/crop': typeof FarmerCropRoute
+  '/farmer/notifications': typeof FarmerNotificationsRoute
   '/farmer/procurement': typeof FarmerProcurementRoute
+  '/farmer/profile': typeof FarmerProfileRoute
   '/farmer/queue': typeof FarmerQueueRoute
   '/farmer/report-delay': typeof FarmerReportDelayRoute
   '/farmer/slot': typeof FarmerSlotRoute
+  '/farmer/track': typeof FarmerTrackRoute
   '/farmer/': typeof FarmerIndexRoute
 }
 export interface FileRouteTypes {
@@ -103,39 +139,52 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/farmer'
+    | '/operator'
     | '/farmer/alternatives'
     | '/farmer/crop'
+    | '/farmer/notifications'
     | '/farmer/procurement'
+    | '/farmer/profile'
     | '/farmer/queue'
     | '/farmer/report-delay'
     | '/farmer/slot'
+    | '/farmer/track'
     | '/farmer/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/operator'
     | '/farmer/alternatives'
     | '/farmer/crop'
+    | '/farmer/notifications'
     | '/farmer/procurement'
+    | '/farmer/profile'
     | '/farmer/queue'
     | '/farmer/report-delay'
     | '/farmer/slot'
+    | '/farmer/track'
     | '/farmer'
   id:
     | '__root__'
     | '/'
     | '/farmer'
+    | '/operator'
     | '/farmer/alternatives'
     | '/farmer/crop'
+    | '/farmer/notifications'
     | '/farmer/procurement'
+    | '/farmer/profile'
     | '/farmer/queue'
     | '/farmer/report-delay'
     | '/farmer/slot'
+    | '/farmer/track'
     | '/farmer/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   FarmerRoute: typeof FarmerRouteWithChildren
+  OperatorRoute: typeof OperatorRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -152,6 +201,13 @@ declare module '@tanstack/react-router' {
       path: '/farmer'
       fullPath: '/farmer'
       preLoaderRoute: typeof FarmerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/operator': {
+      id: '/operator'
+      path: '/operator'
+      fullPath: '/operator'
+      preLoaderRoute: typeof OperatorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/farmer/': {
@@ -175,11 +231,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FarmerCropRouteImport
       parentRoute: typeof FarmerRoute
     }
+    '/farmer/notifications': {
+      id: '/farmer/notifications'
+      path: '/notifications'
+      fullPath: '/farmer/notifications'
+      preLoaderRoute: typeof FarmerNotificationsRouteImport
+      parentRoute: typeof FarmerRoute
+    }
     '/farmer/procurement': {
       id: '/farmer/procurement'
       path: '/procurement'
       fullPath: '/farmer/procurement'
       preLoaderRoute: typeof FarmerProcurementRouteImport
+      parentRoute: typeof FarmerRoute
+    }
+    '/farmer/profile': {
+      id: '/farmer/profile'
+      path: '/profile'
+      fullPath: '/farmer/profile'
+      preLoaderRoute: typeof FarmerProfileRouteImport
       parentRoute: typeof FarmerRoute
     }
     '/farmer/queue': {
@@ -203,26 +273,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FarmerSlotRouteImport
       parentRoute: typeof FarmerRoute
     }
+    '/farmer/track': {
+      id: '/farmer/track'
+      path: '/track'
+      fullPath: '/farmer/track'
+      preLoaderRoute: typeof FarmerTrackRouteImport
+      parentRoute: typeof FarmerRoute
+    }
   }
 }
 
 interface FarmerRouteChildren {
   FarmerAlternativesRoute: typeof FarmerAlternativesRoute
   FarmerCropRoute: typeof FarmerCropRoute
+  FarmerNotificationsRoute: typeof FarmerNotificationsRoute
   FarmerProcurementRoute: typeof FarmerProcurementRoute
+  FarmerProfileRoute: typeof FarmerProfileRoute
   FarmerQueueRoute: typeof FarmerQueueRoute
   FarmerReportDelayRoute: typeof FarmerReportDelayRoute
   FarmerSlotRoute: typeof FarmerSlotRoute
+  FarmerTrackRoute: typeof FarmerTrackRoute
   FarmerIndexRoute: typeof FarmerIndexRoute
 }
 
 const FarmerRouteChildren: FarmerRouteChildren = {
   FarmerAlternativesRoute: FarmerAlternativesRoute,
   FarmerCropRoute: FarmerCropRoute,
+  FarmerNotificationsRoute: FarmerNotificationsRoute,
   FarmerProcurementRoute: FarmerProcurementRoute,
+  FarmerProfileRoute: FarmerProfileRoute,
   FarmerQueueRoute: FarmerQueueRoute,
   FarmerReportDelayRoute: FarmerReportDelayRoute,
   FarmerSlotRoute: FarmerSlotRoute,
+  FarmerTrackRoute: FarmerTrackRoute,
   FarmerIndexRoute: FarmerIndexRoute,
 }
 
@@ -232,6 +315,7 @@ const FarmerRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   FarmerRoute: FarmerRouteWithChildren,
+  OperatorRoute: OperatorRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
