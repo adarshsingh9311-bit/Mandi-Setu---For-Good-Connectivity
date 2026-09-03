@@ -12,6 +12,12 @@ Open http://127.0.0.1:8081. This starts FastAPI on port 8000, the frontend on
 8081, and a 60-second reminder/missed-slot worker. Keep the terminal running.
 The existing `npm run dev` frontend on port 8080 can use the same backend.
 
+To populate the shared local database with repeatable, clearly labelled SIH
+showcase records, stop the combined server once and run `npm run seed:sih`.
+Restart with `npm run dev:local`. The seed preserves existing users and adds ten
+showcase farmers, live queue stages, completed procurement, a missed slot,
+future bookings, notifications, an SMS simulation and an overload alert.
+
 For an SIH presentation, open `/government/login`, enter any display name in
 **Quick SIH demo access**, and select **Open Government Demo**. The combined
 launcher enables this password-free route only for the local demo process via
