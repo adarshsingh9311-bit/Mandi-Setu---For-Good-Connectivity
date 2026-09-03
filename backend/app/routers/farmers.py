@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/farmers", tags=["farmers and crops"])
 @router.get('/me/visits')
 def visits():
     with connection() as db:
-        return [dict(r) for r in db.execute('SELECT * FROM visits WHERE farmer_id=? ORDER BY rowid DESC',(current_farmer_id(),)).fetchall()]
+        return [dict(r) for r in db.execute('SELECT * FROM visits WHERE farmer_id=? ORDER BY COALESCE(booked_at,arrived_at,completed_at) DESC, id DESC',(current_farmer_id(),)).fetchall()]
 
 
 @router.get("/me", response_model=FarmerProfile)
@@ -29,7 +29,7 @@ def get_profile():
 @router.get("/me/crops", response_model=list[CropRecord])
 def list_crops():
     with connection() as db:
-        rows = db.execute("SELECT payload FROM crops WHERE farmer_id = ? ORDER BY rowid", (current_farmer_id(),)).fetchall()
+        rows = db.execute("SELECT payload FROM crops WHERE farmer_id = ? ORDER BY id", (current_farmer_id(),)).fetchall()
     return [json.loads(row["payload"]) for row in rows]
 
 

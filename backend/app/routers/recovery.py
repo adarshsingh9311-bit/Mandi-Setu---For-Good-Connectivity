@@ -81,7 +81,7 @@ def options_for(db, report):
 @router.get("")
 def reports():
     with connection() as db:
-        return [report_result(r) for r in db.execute("SELECT * FROM delay_reports WHERE farmer_id = ? ORDER BY rowid DESC", (current_farmer_id(),)).fetchall()]
+        return [report_result(r) for r in db.execute("SELECT * FROM delay_reports WHERE farmer_id = ? ORDER BY created_at DESC", (current_farmer_id(),)).fetchall()]
 
 
 @router.post("")

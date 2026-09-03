@@ -72,7 +72,7 @@ def join_queue(centre_id: str):
             current=count/max(1,configured_centre.capacityPerDay)*100
             if previous<=threshold<current:
                 key=f"overload:{centre_id}:{datetime.now(IST).date()}"
-                if db.execute('INSERT OR IGNORE INTO delivery_keys VALUES (?)',(key,)).rowcount:
+                if db.execute('INSERT INTO delivery_keys VALUES (?) ON CONFLICT (key) DO NOTHING',(key,)).rowcount:
                     for booking in db.execute('SELECT farmer_id FROM bookings WHERE centre_id=?',(centre_id,)).fetchall():
                         notify(db,booking['farmer_id'],'centre','Mandi overload detected','Live queue load crossed the configured threshold. Check alternate mandis before travelling.')
         return snapshot(db, row, centre)

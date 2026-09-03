@@ -9,8 +9,9 @@ from .database import connection, DEMO_FARMER_ID
 
 
 def export(destination: Path, excluded_usernames=()):
+    database_url = os.environ.get('DATABASE_URL')
     database = Path(os.environ.get('KISANSETU_DB_PATH', Path(__file__).resolve().parents[1] / 'data' / 'kisansetu.sqlite3'))
-    if not database.is_file():
+    if not database_url and not database.is_file():
         raise FileNotFoundError('No existing backend database. Start the backend before exporting.')
     with connection() as db:
         db.execute('BEGIN')

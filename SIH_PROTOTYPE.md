@@ -131,7 +131,10 @@ operational counts are computed from actual records. Old data is not dropped.
 
 ## Configuration and deployment
 
-- `KISANSETU_DB_PATH`: optional path to the existing SQLite database.
+- `DATABASE_URL`: required in production; Render injects the single PostgreSQL
+  connection string from the `mandisetu-db` resource.
+- `KISANSETU_DB_PATH`: local test/development compatibility only. Production
+  selects PostgreSQL whenever `DATABASE_URL` is present.
 - `VITE_API_URL`: optional frontend build-time HTTPS API origin. Unset uses
   same-origin `/api`; production no longer falls back to localhost.
 - `MANDISETU_CORS_ORIGINS`: comma-separated authorized production frontend origins.
@@ -142,16 +145,15 @@ operational counts are computed from actual records. Old data is not dropped.
   there is no implemented real SMS adapter or delivery claim.
 
 For hosting, deploy the Vite/Nitro frontend to its configured supported runtime.
-Deploy FastAPI to a persistent Python host/container, mount the existing database,
-set authorized CORS origins, and configure either a same-origin `/api` reverse
-proxy or VITE_API_URL before building. Use HTTPS. This change prepares deployment;
-it does not create a public hosting account or deploy to an external provider.
-Back up the database before moving it. SQLite needs persistent disk and is intended
-for a single-instance SIH prototype, not a distributed serverless database.
+The root `render.yaml` provisions a free FastAPI web service and one free Render
+PostgreSQL database. It connects them through `DATABASE_URL`, initializes the schema,
+and adds the SIH showcase data on first deploy. Set authorized CORS origins and
+configure either a same-origin `/api` reverse proxy or `VITE_API_URL` before building
+the frontend. Use HTTPS. SQLite remains available only for local compatibility tests.
 
 ## Verification and limitations
 
-Backend regression suite: 22 tests pass, covering farmer registration/authentication,
+Backend regression suite: 23 tests pass, covering farmer registration/authentication,
 ownership, staff scopes, booking concurrency, queue stages, measured procurement,
 prediction access, SMS/IVR simulation, override visibility and missed recovery.
 Run from backend: `.venv\Scripts\python -m unittest discover -s tests -v`.

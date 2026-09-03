@@ -3,13 +3,38 @@ import json
 import os
 import sqlite3
 from contextlib import contextmanager
+from collections.abc import Mapping
 from pathlib import Path
+
+try:
+    import psycopg
+    from psycopg.rows import dict_row
+except ImportError:  # SQLite remains available for isolated local tests.
+    psycopg = None
+    dict_row = None
+
+INTEGRITY_ERRORS = (sqlite3.IntegrityError,) + ((psycopg.IntegrityError,) if psycopg else ())
 
 DEMO_FARMER_ID = "KS-UP-23180"
 
 
 @contextmanager
 def connection():
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        if psycopg is None:
+            raise RuntimeError("PostgreSQL requires psycopg; install backend requirements")
+        raw = psycopg.connect(database_url, row_factory=dict_row)
+        db = PostgresConnection(raw)
+        try:
+            yield db
+            raw.commit()
+        except Exception:
+            raw.rollback()
+            raise
+        finally:
+            raw.close()
+        return
     path = Path(os.environ.get("KISANSETU_DB_PATH", Path(__file__).resolve().parents[1] / "data" / "kisansetu.sqlite3"))
     path.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(path)
@@ -20,6 +45,54 @@ def connection():
             yield db
     finally:
         db.close()
+
+
+class HybridRow(Mapping):
+    def __init__(self, values):
+        self.values = values
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return list(self.values.values())[key]
+        return self.values[key]
+
+    def __iter__(self):
+        return iter(self.values)
+
+    def __len__(self):
+        return len(self.values)
+
+
+class PostgresResult:
+    def __init__(self, cursor, buffered=None):
+        self.cursor = cursor
+        self.buffered = buffered
+        self.rowcount = cursor.rowcount
+        self.lastrowid = buffered["id"] if buffered else None
+
+    def fetchone(self):
+        row, self.buffered = (self.buffered, None) if self.buffered is not None else (self.cursor.fetchone(), None)
+        return HybridRow(row) if row is not None else None
+
+    def fetchall(self):
+        rows = ([] if self.buffered is None else [self.buffered]) + self.cursor.fetchall()
+        self.buffered = None
+        return [HybridRow(row) for row in rows]
+
+
+class PostgresConnection:
+    def __init__(self, raw):
+        self.raw = raw
+
+    def execute(self, sql, params=()):
+        statement = sql.replace("BEGIN IMMEDIATE", "BEGIN")
+        statement = statement.replace("INTEGER PRIMARY KEY AUTOINCREMENT", "BIGSERIAL PRIMARY KEY")
+        statement = statement.replace("?", "%s")
+        returns_id = statement.lstrip().upper().startswith("INSERT INTO QUEUE_TOKENS") and "RETURNING" not in statement.upper()
+        if returns_id:
+            statement += " RETURNING id"
+        cursor = self.raw.execute(statement, params)
+        return PostgresResult(cursor, cursor.fetchone() if returns_id else None)
 
 
 def initialize():
@@ -65,7 +138,7 @@ def initialize():
             reason TEXT NOT NULL, arrival TEXT NOT NULL, booking TEXT NOT NULL,
             resolution TEXT, created_at TEXT NOT NULL
         )""")
-        inserted = db.execute("INSERT OR IGNORE INTO farmers VALUES (?, ?)", (DEMO_FARMER_ID, json.dumps(profile))).rowcount
+        inserted = db.execute("INSERT INTO farmers VALUES (?, ?) ON CONFLICT (id) DO NOTHING", (DEMO_FARMER_ID, json.dumps(profile))).rowcount
         if inserted:
             for crop in [
                 dict(id="crop-1", type="Wheat", quantity=50, unit="Quintals", expectedDate="2026-09-05", preferredCentreId="mandi-a", transportAvailable=True, language="en", status="Not Scheduled"),

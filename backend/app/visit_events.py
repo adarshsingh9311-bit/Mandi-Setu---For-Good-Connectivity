@@ -18,7 +18,7 @@ def cancelled(db,farmer_id):
     for row in db.execute("SELECT * FROM visits WHERE farmer_id=? AND status='Booked' AND token_id IS NULL",(farmer_id,)).fetchall():
         db.execute("UPDATE visits SET status='Cancelled' WHERE id=?",(row['id'],));event(db,row['centre_id'],row['id'],'booking','Booking cancelled')
 def checked_in(db,token):
-    row=db.execute("SELECT * FROM visits WHERE farmer_id=? AND centre_id=? AND status='Booked' AND token_id IS NULL ORDER BY rowid DESC LIMIT 1",(token['farmer_id'],token['centre_id'])).fetchone()
+    row=db.execute("SELECT * FROM visits WHERE farmer_id=? AND centre_id=? AND status='Booked' AND token_id IS NULL ORDER BY booked_at DESC, id DESC LIMIT 1",(token['farmer_id'],token['centre_id'])).fetchone()
     if row:
         visit_id=row['id'];db.execute("UPDATE visits SET status='Waiting',arrived_at=?,token_id=? WHERE id=?",(now(),token['id'],visit_id))
     else:

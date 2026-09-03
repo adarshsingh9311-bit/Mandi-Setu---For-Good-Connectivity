@@ -31,7 +31,7 @@ def ivr_answer(db, farmer_id, action, language):
         c = options[0]
         return f"वैकल्पिक मंडी {c.name}, दूरी {c.distanceKm} किलोमीटर, प्रतीक्षा {c.estimatedWaitMin} मिनट।" if hi else f"Alternative: {c.name}, {c.distanceKm} km away, estimated wait {c.estimatedWaitMin} minutes."
     if action == 'procurement':
-        visit = db.execute('SELECT status,actual_quantity_quintals FROM visits WHERE farmer_id=? ORDER BY rowid DESC LIMIT 1',(farmer_id,)).fetchone()
+        visit = db.execute('SELECT status,actual_quantity_quintals FROM visits WHERE farmer_id=? ORDER BY COALESCE(booked_at,arrived_at,completed_at) DESC, id DESC LIMIT 1',(farmer_id,)).fetchone()
         if not visit:return 'खरीद का रिकॉर्ड उपलब्ध नहीं है।' if hi else 'No procurement visit is recorded.'
         quantity = visit['actual_quantity_quintals']
         return f"खरीद स्थिति {visit['status']}, दर्ज मात्रा {quantity if quantity is not None else 'उपलब्ध नहीं'} क्विंटल।" if hi else f"Procurement status: {visit['status']}. Recorded quantity: {quantity if quantity is not None else 'not recorded'} quintals."

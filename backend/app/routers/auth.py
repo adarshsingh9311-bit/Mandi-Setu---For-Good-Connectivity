@@ -1,12 +1,11 @@
 import hashlib
-import sqlite3
 import time
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 from ..auth import create_account, new_session, verify_password
-from ..database import connection
+from ..database import connection, INTEGRITY_ERRORS
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
@@ -42,7 +41,7 @@ def register(payload: Registration):
                 profile['mobile'] = payload.mobile
                 db.execute('UPDATE farmers SET payload=? WHERE id=?', (json.dumps(profile), user['id']))
             token = new_session(db, user["id"])
-    except sqlite3.IntegrityError:
+    except INTEGRITY_ERRORS:
         raise HTTPException(409, "Username is unavailable")
     return dict(user=user, token=token)
 
@@ -58,7 +57,9 @@ def login(payload: Credentials):
         row = db.execute("SELECT * FROM accounts WHERE username = ?", (username,)).fetchone()
         if row is None or not verify_password(payload.password, row["password_hash"]):
             failures = (attempt["failures"] if attempt and attempt["blocked_until"] == 0 else 0) + 1
-            db.execute("INSERT OR REPLACE INTO login_attempts VALUES (?, ?, ?)", (username, failures, time.time() + 900 if failures >= 5 else 0))
+            db.execute("""INSERT INTO login_attempts VALUES (?, ?, ?)
+                ON CONFLICT (username) DO UPDATE SET failures=excluded.failures, blocked_until=excluded.blocked_until""",
+                (username, failures, time.time() + 900 if failures >= 5 else 0))
             error = True
         else:
             db.execute("DELETE FROM login_attempts WHERE username = ?", (username,))

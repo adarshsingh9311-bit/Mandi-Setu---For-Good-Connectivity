@@ -164,7 +164,8 @@ The development frontend proxies `/api` to the backend, avoiding a separate-orig
 If a server is stopped, account creation cannot work; the UI now explains backend connection failures.
 `npm run dev` still starts just the frontend.
 
-This is a local URL, not a public deployment. For a separately deployed frontend set `VITE_API_URL`
+This is a local URL, not a public deployment. Production uses the PostgreSQL `DATABASE_URL`
+injected by the Render Blueprint. For a separately deployed frontend set `VITE_API_URL`
 at build time to the HTTPS backend origin and configure that frontend origin in backend CORS.
 The current CORS configuration allows loopback development origins only. Never set a hosted frontend
 to a localhost API: that points at each visitor's own computer.

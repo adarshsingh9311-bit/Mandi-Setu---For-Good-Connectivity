@@ -80,7 +80,9 @@ def save_booking(db,payload,centre):
     if db.execute("SELECT 1 FROM visits WHERE farmer_id=? AND status IN ('Checked In','Waiting','Quality Check','Procurement')",(farmer,)).fetchone():
         raise HTTPException(409,'Complete the active queue visit before changing your booking')
     if old: crop_status(db,old['crop_id'],'Not Scheduled')
-    db.execute('INSERT OR REPLACE INTO bookings VALUES (?,?,?,?,?)',(farmer,payload.cropId,payload.centreId,str(payload.day),payload.slotId))
+    db.execute('''INSERT INTO bookings VALUES (?,?,?,?,?) ON CONFLICT (farmer_id) DO UPDATE SET
+        crop_id=excluded.crop_id,centre_id=excluded.centre_id,day=excluded.day,slot_id=excluded.slot_id''',
+        (farmer,payload.cropId,payload.centreId,str(payload.day),payload.slotId))
     crop_status(db,payload.cropId,'Slot Confirmed')
     visit_events.booked(db,farmer,payload,slot['window'])
     if old and old['centre_id'] != payload.centreId:

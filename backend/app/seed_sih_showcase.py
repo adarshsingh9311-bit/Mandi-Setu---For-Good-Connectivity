@@ -64,7 +64,8 @@ def seed() -> None:
                 "status": "Slot Confirmed" if status == "Booked" else "Not Scheduled",
             }
             db.execute(
-                "INSERT OR REPLACE INTO crops (id,farmer_id,payload) VALUES (?,?,?)",
+                """INSERT INTO crops (id,farmer_id,payload) VALUES (?,?,?)
+                ON CONFLICT (id) DO UPDATE SET farmer_id=excluded.farmer_id,payload=excluded.payload""",
                 (crop_id, farmer_id, json.dumps(crop_payload)),
             )
             visit_id = f"sih-visit-{index:02d}"
@@ -90,16 +91,24 @@ def seed() -> None:
                 completed = (now - timedelta(minutes=12 - index)).isoformat()
             booking_day = future_day if status == "Booked" else today
             db.execute(
-                """INSERT OR REPLACE INTO visits
+                """INSERT INTO visits
                 (id,farmer_id,centre_id,crop_id,crop_type,quantity_quintals,booking_day,slot_id,slot_label,status,
                  booked_at,arrived_at,started_at,completed_at,token_id,actual_quantity_quintals)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (id) DO UPDATE SET
+                farmer_id=excluded.farmer_id,centre_id=excluded.centre_id,crop_id=excluded.crop_id,
+                crop_type=excluded.crop_type,quantity_quintals=excluded.quantity_quintals,
+                booking_day=excluded.booking_day,slot_id=excluded.slot_id,slot_label=excluded.slot_label,
+                status=excluded.status,booked_at=excluded.booked_at,arrived_at=excluded.arrived_at,
+                started_at=excluded.started_at,completed_at=excluded.completed_at,
+                token_id=excluded.token_id,actual_quantity_quintals=excluded.actual_quantity_quintals""",
                 (visit_id, farmer_id, centre, crop_id, crop, quantity, booking_day, "s1", "10:00 AM – 11:00 AM",
                  status, (now - timedelta(days=1)).isoformat(), arrived, started, completed, token_id,
                  quantity - 1 if status == "Completed" else None),
             )
             if status == "Booked":
-                db.execute("INSERT OR REPLACE INTO bookings VALUES (?,?,?,?,?)", (farmer_id, crop_id, centre, future_day, "s1"))
+                db.execute("""INSERT INTO bookings VALUES (?,?,?,?,?) ON CONFLICT (farmer_id) DO UPDATE SET
+                    crop_id=excluded.crop_id,centre_id=excluded.centre_id,day=excluded.day,slot_id=excluded.slot_id""",
+                    (farmer_id, crop_id, centre, future_day, "s1"))
             else:
                 db.execute("DELETE FROM bookings WHERE farmer_id=?", (farmer_id,))
             if not db.execute(
@@ -110,7 +119,7 @@ def seed() -> None:
                     (farmer_id, "centre", "SIH showcase status", f"Your procurement visit is currently {status}.", now.isoformat()),
                 )
 
-        db.execute("INSERT OR REPLACE INTO mandi_overrides VALUES ('mandi-a',1)")
+        db.execute("INSERT INTO mandi_overrides VALUES ('mandi-a',1) ON CONFLICT (centre_id) DO UPDATE SET overloaded=excluded.overloaded")
         if not db.execute("SELECT 1 FROM operational_events WHERE message LIKE 'SIH showcase:%'").fetchone():
             db.execute(
                 """INSERT INTO operational_events
@@ -119,11 +128,11 @@ def seed() -> None:
                 (now.isoformat(),),
             )
         db.execute(
-            """INSERT OR IGNORE INTO communication_events
+            """INSERT INTO communication_events
             (id,farmer_id,channel,event_type,recipient,message,provider,status,created_at)
             VALUES ('sih-sms-showcase',NULL,'sms','overload_alert','SIH demo recipients',
             'MandiSetu demo: Mandi A is overloaded. Mandi B is available as an alternative.',
-            'demo','simulated_not_delivered',?)""",
+            'demo','simulated_not_delivered',?) ON CONFLICT (id) DO NOTHING""",
             (now.isoformat(),),
         )
     print("SIH showcase data is ready: 10 farmers, live queue, completed procurement, missed slot, bookings and overload alert.")

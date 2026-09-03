@@ -28,7 +28,7 @@ def sweep(now=None):
                 missed+=1
             elif now <= starts <= now+timedelta(hours=1):
                 key='reminder:'+visit['id']
-                if db.execute('INSERT OR IGNORE INTO delivery_keys VALUES (?)',(key,)).rowcount:
+                if db.execute('INSERT INTO delivery_keys VALUES (?) ON CONFLICT (key) DO NOTHING',(key,)).rowcount:
                     notify(db,visit['farmer_id'],'slot','Slot reminder',f"Your slot at {centre.name} begins at {slot['starts']} on {visit['booking_day']}.")
                     reminders+=1
     return dict(missed=missed,reminders=reminders)

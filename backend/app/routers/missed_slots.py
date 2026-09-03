@@ -10,7 +10,7 @@ from ..store import list_centres, get_centre
 router=APIRouter(tags=['missed-slot recovery'])
 
 def rows(db,farmer=None):
-    return [dict(r) for r in db.execute("SELECT v.id,v.farmer_id,v.centre_id,v.crop_id,v.crop_type,v.booking_day,v.slot_label,r.booking AS recovered_booking FROM visits v LEFT JOIN missed_recoveries r ON r.visit_id=v.id WHERE v.status='Missed'"+(' AND v.farmer_id=?' if farmer else '')+' ORDER BY v.rowid DESC',(farmer,) if farmer else ()).fetchall()]
+    return [dict(r) for r in db.execute("SELECT v.id,v.farmer_id,v.centre_id,v.crop_id,v.crop_type,v.booking_day,v.slot_label,r.booking AS recovered_booking FROM visits v LEFT JOIN missed_recoveries r ON r.visit_id=v.id WHERE v.status='Missed'"+(' AND v.farmer_id=?' if farmer else '')+' ORDER BY COALESCE(v.booked_at,v.arrived_at,v.completed_at) DESC, v.id DESC',(farmer,) if farmer else ()).fetchall()]
 
 @router.get('/api/missed-slots')
 def mine():

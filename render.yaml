@@ -1,16 +1,22 @@
+databases:
+  - name: mandisetu-db
+    plan: free
+
 services:
   - type: web
     name: mandisetu-api
     runtime: docker
-    plan: starter
+    plan: free
     rootDir: backend
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     autoDeployTrigger: commit
     initialDeployHook: python -m app.seed_sih_showcase
     envVars:
-      - key: KISANSETU_DB_PATH
-        value: /data/kisansetu.sqlite3
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mandisetu-db
+          property: connectionString
       - key: MANDISETU_JOBS_ENABLED
         value: "1"
       - key: MANDISETU_SMS_MODE
@@ -19,7 +25,3 @@ services:
         value: "1"
       - key: MANDISETU_CORS_ORIGINS
         sync: false
-    disk:
-      name: mandisetu-data
-      mountPath: /data
-      sizeGB: 1

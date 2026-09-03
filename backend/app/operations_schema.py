@@ -10,7 +10,7 @@ def migrate(db):
     from .store import _CENTRES
     db.execute("CREATE TABLE IF NOT EXISTS mandis (id TEXT PRIMARY KEY, payload TEXT NOT NULL)")
     for centre in _CENTRES.values():
-        db.execute("INSERT OR IGNORE INTO mandis VALUES (?, ?)", (centre.id, centre.model_dump_json()))
+        db.execute("INSERT INTO mandis VALUES (?, ?) ON CONFLICT (id) DO NOTHING", (centre.id, centre.model_dump_json()))
     db.execute("""CREATE TABLE IF NOT EXISTS prediction_records (
         id TEXT PRIMARY KEY, centre_id TEXT NOT NULL, model_version TEXT NOT NULL,
         horizon_min INTEGER NOT NULL, inputs TEXT NOT NULL, output TEXT NOT NULL, created_at TEXT NOT NULL)""")
@@ -26,7 +26,7 @@ def migrate(db):
     db.execute("CREATE TABLE IF NOT EXISTS account_roles (account_id TEXT PRIMARY KEY REFERENCES accounts(id), role TEXT NOT NULL CHECK(role IN ('government', 'super_admin')))")
     db.execute("CREATE TABLE IF NOT EXISTS mandi_config (centre_id TEXT PRIMARY KEY, capacity INTEGER NOT NULL CHECK(capacity > 0), processing_min INTEGER NOT NULL CHECK(processing_min > 0), counters INTEGER NOT NULL CHECK(counters >= 0), closed INTEGER NOT NULL DEFAULT 0)")
     db.execute("CREATE TABLE IF NOT EXISTS operational_settings (id INTEGER PRIMARY KEY CHECK(id=1), busy_percent REAL NOT NULL, overloaded_percent REAL NOT NULL)")
-    db.execute("INSERT OR IGNORE INTO operational_settings VALUES (1, 60, 80)")
+    db.execute("INSERT INTO operational_settings VALUES (1, 60, 80) ON CONFLICT (id) DO NOTHING")
     db.execute("""CREATE TABLE IF NOT EXISTS managed_slots (
         centre_id TEXT NOT NULL, day TEXT NOT NULL, slot_id TEXT NOT NULL,
         starts TEXT NOT NULL, ends TEXT NOT NULL, capacity INTEGER NOT NULL CHECK(capacity >= 0),

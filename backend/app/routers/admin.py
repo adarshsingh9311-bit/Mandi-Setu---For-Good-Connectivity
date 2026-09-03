@@ -74,8 +74,9 @@ def update_mandi(centre_id:str,payload:MandiUpdate):
         db.execute('BEGIN IMMEDIATE')
         serving=db.execute("SELECT COUNT(*) FROM queue_tokens WHERE centre_id=? AND stage IN ('grading','weighing')",(centre_id,)).fetchone()[0]
         if payload.activeCounters<serving:raise HTTPException(409,'Cannot reduce counters below the number currently serving')
-        db.execute('INSERT OR REPLACE INTO mandi_config VALUES (?,?,?,?,?)',(centre_id,payload.capacity,payload.processingMin,payload.activeCounters,int(payload.closed)))
-        db.execute('INSERT OR REPLACE INTO mandi_overrides VALUES (?,?)',(centre_id,int(payload.overloaded)))
+        db.execute('''INSERT INTO mandi_config VALUES (?,?,?,?,?) ON CONFLICT (centre_id) DO UPDATE SET
+            capacity=excluded.capacity,processing_min=excluded.processing_min,counters=excluded.counters,closed=excluded.closed''',(centre_id,payload.capacity,payload.processingMin,payload.activeCounters,int(payload.closed)))
+        db.execute('INSERT INTO mandi_overrides VALUES (?,?) ON CONFLICT (centre_id) DO UPDATE SET overloaded=excluded.overloaded',(centre_id,int(payload.overloaded)))
         visit_events.event(db,centre_id,None,'mandi','Mandi configuration updated')
         if payload.overloaded:
             for booking in db.execute('SELECT farmer_id FROM bookings WHERE centre_id=?',(centre_id,)).fetchall():
@@ -169,7 +170,9 @@ def save_slot(payload,editing):
         if old and count and (old['starts'],old['ends'])!=(payload.starts,payload.ends):raise HTTPException(409,'Cannot change times for a booked slot')
         if any(s['id']!=payload.slotId and payload.starts<s['ends'] and payload.ends>s['starts'] for s in existing):raise HTTPException(409,'Slot overlaps an existing window')
         if datetime.combine(payload.day,time.fromisoformat(payload.starts),IST)<=datetime.now(IST):raise HTTPException(409,'Cannot change a slot that has already started')
-        db.execute('INSERT OR REPLACE INTO managed_slots VALUES (?,?,?,?,?,?,?)',(payload.centreId,str(payload.day),payload.slotId,payload.starts,payload.ends,payload.capacity,int(payload.enabled)))
+        db.execute('''INSERT INTO managed_slots VALUES (?,?,?,?,?,?,?)
+            ON CONFLICT (centre_id,day,slot_id) DO UPDATE SET starts=excluded.starts,ends=excluded.ends,
+            capacity=excluded.capacity,enabled=excluded.enabled''',(payload.centreId,str(payload.day),payload.slotId,payload.starts,payload.ends,payload.capacity,int(payload.enabled)))
         visit_events.event(db,payload.centreId,None,'slot',f'Slot {payload.slotId} on {payload.day} updated')
     return {'ok':True}
 
@@ -205,7 +208,7 @@ def notifications():
         events=[dict(r) for r in db.execute('SELECT * FROM operational_events ORDER BY id DESC LIMIT 200').fetchall()]
         overloaded=[m for m in ops.mandi_rows(db,today()) if m['status']=='Overloaded']
         reports=[]
-        for row in db.execute('SELECT d.*,f.payload AS profile FROM delay_reports d JOIN farmers f ON f.id=d.farmer_id ORDER BY d.rowid DESC LIMIT 100').fetchall():
+        for row in db.execute('SELECT d.*,f.payload AS profile FROM delay_reports d JOIN farmers f ON f.id=d.farmer_id ORDER BY d.created_at DESC LIMIT 100').fetchall():
             booking=json.loads(row['booking'])
             resolution=json.loads(row['resolution']) if row['resolution'] else None
             reports.append(dict(id=row['id'],reason=row['reason'],arrival=row['arrival'],resolved=resolution is not None,

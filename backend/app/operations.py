@@ -39,7 +39,7 @@ def average(values):
 
 def visit_rows(db,centre_id=None):
     centre_id=scope(centre_id)
-    rows=db.execute('SELECT v.*, f.payload AS profile FROM visits v JOIN farmers f ON f.id=v.farmer_id '+('WHERE v.centre_id=? ' if centre_id else '')+'ORDER BY v.rowid DESC', (centre_id,) if centre_id else ()).fetchall()
+    rows=db.execute('SELECT v.*, f.payload AS profile FROM visits v JOIN farmers f ON f.id=v.farmer_id '+('WHERE v.centre_id=? ' if centre_id else '')+'ORDER BY COALESCE(v.booked_at,v.arrived_at,v.completed_at) DESC, v.id DESC', (centre_id,) if centre_id else ()).fetchall()
     result=[]
     now=datetime.now(IST).isoformat()
     for row in rows:
