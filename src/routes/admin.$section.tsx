@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Dashboard, Mandis } from "@/components/admin/Overview";
+import { Mandis } from "@/components/admin/Overview";
+import { CommandCentre } from "@/components/government/CommandCentre";
 import { QueueManagement, SlotManagement, FarmerManagement } from "@/components/admin/Management";
 import { Monitoring, Notifications, Reports, Settings } from "@/components/admin/Insights";
 export const Route = createFileRoute("/admin/$section")({ component: AdminPage });
 const pages = {
-  dashboard: ["Government dashboard", Dashboard],
+  dashboard: ["Procurement Command Centre", CommandCentre],
   mandis: ["Mandi management", Mandis],
   queue: ["Live procurement queue", QueueManagement],
   slots: ["Slot management", SlotManagement],
@@ -23,7 +24,7 @@ function AdminPage() {
   return (
     <>
       <header className="mb-7">
-        <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700">
+        <p className="text-xs font-semibold uppercase tracking-widest text-blue-700">
           MandiSetu · Procurement operations
         </p>
         <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>

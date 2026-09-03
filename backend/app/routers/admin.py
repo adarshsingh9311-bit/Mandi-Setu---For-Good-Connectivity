@@ -190,7 +190,15 @@ def notifications():
     with connection() as db:
         events=[dict(r) for r in db.execute('SELECT * FROM operational_events ORDER BY id DESC LIMIT 200').fetchall()]
         overloaded=[m for m in ops.mandi_rows(db,today()) if m['status']=='Overloaded']
-        reports=[dict(id=r['id'],reason=r['reason'],arrival=r['arrival'],resolved=bool(r['resolution'])) for r in db.execute('SELECT id,reason,arrival,resolution FROM delay_reports ORDER BY rowid DESC LIMIT 100').fetchall()]
+        reports=[]
+        for row in db.execute('SELECT d.*,f.payload AS profile FROM delay_reports d JOIN farmers f ON f.id=d.farmer_id ORDER BY d.rowid DESC LIMIT 100').fetchall():
+            booking=json.loads(row['booking'])
+            resolution=json.loads(row['resolution']) if row['resolution'] else None
+            reports.append(dict(id=row['id'],reason=row['reason'],arrival=row['arrival'],resolved=resolution is not None,
+                farmerName=json.loads(row['profile']).get('name','Unknown farmer'),centreId=booking.get('centreId'),
+                originalSlot=booking.get('slot'),newSlot=resolution['booking'].get('slot') if resolution else None,
+                destinationCentreId=resolution['booking'].get('centreId') if resolution else None,
+                rescheduled=bool(resolution and resolution['optionId']!='keep'),createdAt=row['created_at']))
         return dict(events=events,overloaded=overloaded,delayReports=reports)
 
 @router.get('/reports')

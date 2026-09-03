@@ -16,6 +16,7 @@ import {
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
+import "@/components/government/government.css";
 export const Route = createFileRoute("/admin")({ component: AdminShell });
 const nav = [
   ["dashboard", "Dashboard", LayoutDashboard],
@@ -37,7 +38,7 @@ function AdminShell() {
     ([key]) => user.role !== "operator" || ["queue", "mandis", "slots"].includes(key),
   );
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="government-workspace min-h-screen bg-background text-foreground">
       <header className="flex items-center justify-between border-b bg-white p-4 lg:hidden">
         <span className="font-bold">MandiSetu · Operations</span>
         <Button
@@ -50,14 +51,14 @@ function AdminShell() {
         </Button>
       </header>
       <aside
-        className={`${open ? "block" : "hidden"} fixed inset-y-0 left-0 z-40 w-64 bg-[#123d32] text-white lg:block`}
+        className={`${open ? "flex" : "hidden"} fixed inset-y-0 left-0 z-40 w-64 flex-col bg-sidebar text-sidebar-foreground lg:flex`}
       >
         <div className="flex items-center gap-3 border-b border-white/10 p-6">
-          <Building2 className="size-9 text-emerald-300" />
+          <Building2 className="size-9 text-blue-300" />
           <div>
             <p className="text-xl font-bold tracking-tight">MandiSetu</p>
-            <p className="mt-1 text-[10px] uppercase tracking-[.18em] text-emerald-200">
-              Government operations
+            <p className="mt-1 text-[10px] uppercase tracking-[.18em] text-blue-200">
+              Procurement operations
             </p>
           </div>
           <button
@@ -68,21 +69,21 @@ function AdminShell() {
             <X />
           </button>
         </div>
-        <nav aria-label="Government navigation" className="space-y-1 p-3">
+        <nav aria-label="Government navigation" className="flex-1 space-y-1 overflow-y-auto p-3">
           {visible.map(([key, label, Icon]) => (
             <Link
               key={key}
               to="/admin/$section"
               params={{ section: key }}
               onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm ${path.endsWith("/" + key) ? "bg-white/15 font-semibold text-white" : "text-emerald-100/80 hover:bg-white/10"}`}
+              className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm ${path.endsWith("/" + key) ? "bg-sidebar-primary font-semibold text-white" : "text-sidebar-foreground/80 hover:bg-sidebar-accent"}`}
             >
               <Icon className="size-4" />
               {label}
             </Link>
           ))}
         </nav>
-        <div className="absolute bottom-6 px-6 text-xs text-emerald-100/70">
+        <div className="shrink-0 border-t border-sidebar-border p-6 text-xs text-sidebar-foreground/70">
           <p className="font-semibold">{user.username}</p>
           <p className="mt-1">
             {user.role === "operator"

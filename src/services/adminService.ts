@@ -1,5 +1,7 @@
 import { apiGet, apiRequest } from "@/lib/api";
 export interface Mandi {
+  lat: number;
+  lng: number;
   id: string;
   name: string;
   district: string;
@@ -113,7 +115,19 @@ export interface Alternate {
 export interface StaffNotifications {
   events: { id: number; centre_id: string; kind: string; message: string; created_at: string }[];
   overloaded: Mandi[];
-  delayReports: { id: string; reason: string; arrival: string; resolved: boolean }[];
+  delayReports: {
+    id: string;
+    reason: string;
+    arrival: string;
+    resolved: boolean;
+    farmerName: string;
+    centreId: string;
+    originalSlot: string | null;
+    newSlot: string | null;
+    destinationCentreId: string | null;
+    rescheduled: boolean;
+    createdAt: string;
+  }[];
 }
 export interface Thresholds {
   busyPercent: number;

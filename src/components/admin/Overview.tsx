@@ -1,21 +1,13 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { ArrowUpRight, TriangleAlert, RefreshCw } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth";
-import {
-  adminService,
-  indiaDay,
-  type Mandi,
-  type Metrics,
-  type Alternate,
-} from "@/services/adminService";
+import { adminService, indiaDay, type Mandi, type Alternate } from "@/services/adminService";
 import {
   useAdmin,
   useAdminMutation,
   LoadState,
-  Metric,
   Table,
   Status,
   duration,
@@ -23,88 +15,6 @@ import {
   inputClass,
 } from "./shared";
 
-export function Dashboard() {
-  const [day, setDay] = useState(indiaDay());
-  const q = useAdmin<{
-    metrics: Metrics;
-    mandis: Mandi[];
-    alerts: { centreId: string; title: string; workload: number }[];
-  }>("dashboard", { day });
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-sm text-muted-foreground">
-            A shared view of today's procurement operations
-          </p>
-        </div>
-        <Field label="Reporting date (India)">
-          <input
-            type="date"
-            className={inputClass}
-            value={day}
-            onChange={(e) => setDay(e.target.value)}
-          />
-        </Field>
-      </div>
-      <LoadState pending={q.isPending} error={q.error} retry={q.refetch} />
-      {q.data && (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {[
-              ["Total farmers", q.data.metrics.totalFarmers],
-              ["Scheduled today", q.data.metrics.scheduledToday],
-              ["Currently waiting", q.data.metrics.waiting],
-              ["Processed today", q.data.metrics.processedToday],
-              ["Procured today (quintals)", q.data.metrics.procurementQuintals],
-              ["Average wait (minutes)", q.data.metrics.averageWaitingMin],
-              ["Active mandis", q.data.metrics.activeMandis],
-              ["Overloaded mandis", q.data.metrics.overloadedMandis],
-            ].map(([label, value]) => (
-              <Metric key={String(label)} label={String(label)} value={value ?? null} />
-            ))}
-          </div>
-          {q.data.metrics.quantityNotRecorded > 0 && (
-            <p className="text-sm text-amber-800">
-              {q.data.metrics.quantityNotRecorded} completed visits have no measured quantity
-              recorded; they are excluded from the quantity total.
-            </p>
-          )}
-          {q.data.alerts.map((a) => (
-            <div
-              key={a.centreId}
-              className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950"
-            >
-              <TriangleAlert className="size-5" />
-              <p className="flex-1">
-                <strong>{a.title}</strong> · {a.workload}% queue capacity
-              </p>
-              <Link
-                to="/admin/$section"
-                params={{ section: "mandis" }}
-                className="font-semibold underline"
-              >
-                Review alternatives
-              </Link>
-            </div>
-          ))}
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Mandi status overview</h2>
-            <Button variant="outline" onClick={() => void q.refetch()}>
-              <RefreshCw className="size-4" />
-              Refresh
-            </Button>
-          </div>
-          <MandiTable rows={q.data.mandis} />
-          <p className="text-xs text-muted-foreground">
-            Live records refresh every 10 seconds. Waiting is measured from check-in to service
-            start; workload is active queue ÷ configured queue capacity.
-          </p>
-        </>
-      )}
-    </div>
-  );
-}
 function MandiTable({ rows, onSelect }: { rows: Mandi[]; onSelect?: (m: Mandi) => void }) {
   return (
     <Table
@@ -178,7 +88,7 @@ export function Mandis() {
     </div>
   );
 }
-function MandiDetail({ mandi, day }: { mandi: Mandi; day: string }) {
+export function MandiDetail({ mandi, day }: { mandi: Mandi; day: string }) {
   const user = useAuth();
   const alt = useAdmin<Alternate[]>(`mandis/${mandi.id}/alternatives`, { day });
   const update = useAdminMutation((body: unknown) =>

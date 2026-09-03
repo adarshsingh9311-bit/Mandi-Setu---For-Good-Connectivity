@@ -4,6 +4,7 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from unittest.mock import patch
+from uuid import uuid4
 from fastapi.testclient import TestClient
 from app.main import app
 from app.database import connection, initialize
@@ -127,3 +128,25 @@ class AdminTests(unittest.TestCase):
         self.assertEqual(self.request('PATCH', 'admin/mandis/mandi-a', json=dict(capacity=1, processingMin=5, activeCounters=1, closed=True)).status_code, 200)
         self.assertEqual(self.request('GET', 'admin/mandis/mandi-a').json()['status'], 'Closed')
         self.assertFalse(any(s['available'] for s in self.request('GET', f'bookings/slots/mandi-a?day={self.day}', 'farmer').json()))
+
+    def test_farmer_recovery_visible_in_government_dashboard(self):
+        self.assertEqual(self.book(self.crop()).status_code, 200)
+        report=self.request('POST','recovery','farmer',json=dict(requestId=str(uuid4()),reason='vehicle',arrival=self.day+'T11:00:00+05:30')).json()
+        pending=self.request('GET','admin/notifications').json()['delayReports'][0]
+        self.assertEqual(pending['id'],report['id'])
+        self.assertEqual(pending['farmerName'],'farmer')
+        self.assertEqual(pending['centreId'],'mandi-a')
+        self.assertFalse(pending['resolved'])
+        self.assertIsNone(pending['newSlot'])
+        options=self.request('GET',f"recovery/{report['id']}/options",'farmer').json()
+        option=next(o for o in options if o['id']!='keep')
+        outcome=self.request('POST',f"recovery/{report['id']}/apply",'farmer',json={'optionId':option['id']})
+        self.assertEqual(outcome.status_code,200)
+        resolved=self.request('GET','admin/notifications').json()['delayReports'][0]
+        self.assertTrue(resolved['rescheduled'])
+        self.assertTrue(resolved['resolved'])
+        self.assertEqual(resolved['newSlot'],outcome.json()['booking']['slot'])
+        self.assertEqual(self.request('GET','bookings/me','farmer').json()['slot'],resolved['newSlot'])
+        self.assertNotIn('mobile',resolved)
+        self.assertNotIn('password_hash',resolved)
+        self.assertEqual(self.request('GET','admin/notifications','operator').status_code,403)
