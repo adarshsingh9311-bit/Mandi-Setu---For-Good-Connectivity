@@ -63,7 +63,7 @@ function ProcurementPage() {
                       {centre.crops.join(", ")}
                     </p>
                   </div>
-                  <StatusBadge status={centre.status} />
+                  <StatusBadge status={centre.status} label={centre.operationalStatus} />
                 </div>
 
                 <div>
@@ -71,7 +71,7 @@ function ProcurementPage() {
                     <span className="text-muted-foreground">{t("currentLoad")}</span>
                     <span className="font-bold">{centre.loadPercent}%</span>
                   </div>
-                  <LoadBar value={centre.loadPercent} />
+                  <LoadBar value={centre.loadPercent} status={centre.status} />
                 </div>
 
                 <p className="flex items-center gap-1.5 text-sm">

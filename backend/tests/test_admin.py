@@ -119,6 +119,10 @@ class AdminTests(unittest.TestCase):
         self.assertEqual(self.request('PATCH', 'admin/settings', json=dict(busyPercent=50, overloadedPercent=80)).status_code, 200)
         self.assertEqual(self.request('PATCH', 'admin/mandis/mandi-a', json=dict(capacity=1, processingMin=5, activeCounters=1)).status_code, 200)
         self.assertEqual(self.request('POST', 'queues/mandi-a/join', 'farmer').status_code, 200)
+        farmer_mandi = self.request('GET', 'centres/mandi-a', 'farmer').json()
+        self.assertEqual(farmer_mandi['loadPercent'], 100)
+        self.assertEqual(farmer_mandi['operationalStatus'], 'Overloaded')
+        self.assertEqual(farmer_mandi['availableCapacity'], 0)
         dashboard = self.request('GET', 'admin/dashboard').json()
         self.assertEqual(dashboard['alerts'][0]['centreId'], 'mandi-a')
         self.assertEqual(dashboard['metrics']['overloadedMandis'], 1)
@@ -150,3 +154,45 @@ class AdminTests(unittest.TestCase):
         self.assertNotIn('mobile',resolved)
         self.assertNotIn('password_hash',resolved)
         self.assertEqual(self.request('GET','admin/notifications','operator').status_code,403)
+
+    def test_sih_prediction_communications_and_recovery(self):
+        self.assertEqual(self.book(self.crop()).status_code,200)
+        sms=self.request('GET','admin/communications').json()['sms']
+        self.assertEqual(sms[0]['status'],'simulated_not_delivered')
+        self.assertEqual(self.request('GET','admin/communications','farmer').status_code,403)
+        self.assertEqual(self.request('GET','admin/communications','operator').status_code,403)
+        for language in ('hi','en'):
+            for action in ('slot','queue','waiting','alternative','procurement'):
+                result=self.request('POST','communications/ivr/simulate','farmer',json=dict(language=language,action=action))
+                self.assertEqual(result.status_code,200,result.text)
+                self.assertEqual(result.json()['status'],'simulated_not_called')
+        self.assertEqual(len(self.request('GET','admin/communications').json()['ivr']),10)
+        self.assertEqual(self.request('POST','communications/ivr/simulate',json=dict(language='en',action='slot')).status_code,403)
+        prediction=self.request('POST','admin/predictions/mandi-a')
+        self.assertEqual(prediction.status_code,200,prediction.text)
+        self.assertEqual(prediction.json()['inputs']['historySamples'],0)
+        self.assertIn('not a trained',prediction.json()['method'])
+        self.assertEqual(self.request('POST','admin/predictions/mandi-a','farmer').status_code,403)
+        from app.missed_slots import sweep
+        result=sweep(datetime.fromisoformat(self.day+'T14:00:00+05:30'))
+        self.assertEqual(result['missed'],1)
+        self.assertEqual(sweep(datetime.fromisoformat(self.day+'T14:00:00+05:30'))['missed'],0)
+        missed=self.request('GET','missed-slots','farmer').json()[0]
+        options=self.request('GET',f"missed-slots/{missed['id']}/options",'farmer').json()
+        self.assertTrue(options)
+        option={k:v for k,v in options[0].items() if k!='label'}
+        rebooked=self.request('POST',f"missed-slots/{missed['id']}/rebook",'farmer',json=option)
+        self.assertEqual(rebooked.status_code,200,rebooked.text)
+        self.assertTrue(self.request('GET','admin/missed-slots').json()[0]['recovered_booking'])
+        self.assertEqual(self.request('GET','bookings/me','farmer').json(),rebooked.json())
+
+    def test_staff_overload_reaches_farmer_and_sms(self):
+        self.assertEqual(self.book(self.crop()).status_code,200)
+        response=self.request('PATCH','admin/mandis/mandi-a',json=dict(capacity=100,processingMin=5,activeCounters=1,overloaded=True))
+        self.assertEqual(response.status_code,200)
+        farmer=self.request('GET','centres/mandi-a','farmer').json()
+        self.assertEqual(farmer['loadPercent'],0)
+        self.assertEqual(farmer['operationalStatus'],'Overloaded')
+        self.assertTrue(self.request('GET','admin/mandis/mandi-a').json()['overloadOverride'])
+        self.assertTrue(any('overload' in event['message'].lower() for event in self.request('GET','admin/communications').json()['sms']))
+        self.assertEqual(self.request('GET','missed-slots','operator').status_code,403)

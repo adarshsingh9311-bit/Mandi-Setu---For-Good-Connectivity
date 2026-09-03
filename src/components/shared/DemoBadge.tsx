@@ -1,6 +1,12 @@
 import { cn } from "@/lib/utils";
 
-export function DemoBadge({ label = "SIH DEMO", className }: { label?: string; className?: string }) {
+export function DemoBadge({
+  label = "SIH DEMO",
+  className,
+}: {
+  label?: string;
+  className?: string;
+}) {
   return (
     <span
       className={cn(
@@ -16,7 +22,8 @@ export function DemoBadge({ label = "SIH DEMO", className }: { label?: string; c
 export function DemoDataNote({ className, text }: { className?: string; text?: string }) {
   return (
     <p className={cn("text-center text-xs text-muted-foreground", className)}>
-      {text ?? "SIH Prototype — Demonstration Data. Not connected to government databases."}
+      {text ??
+        "SIH prototype · Shared MandiSetu records. Not connected to external government systems."}
     </p>
   );
 }

@@ -7,14 +7,6 @@ from .models import CentreStatus, ProcurementCentre
 _CENTRES: dict[str, ProcurementCentre] = {}
 
 
-def status_from_load(load: float) -> CentreStatus:
-    if load >= 120:
-        return "over"
-    if load >= 90:
-        return "high"
-    return "normal"
-
-
 def estimated_wait(farmers_waiting: int, active_counters: int, avg_processing_min: int) -> int:
     return round((farmers_waiting / max(active_counters, 1)) * avg_processing_min)
 
@@ -115,7 +107,6 @@ def seed_centres() -> None:
     _CENTRES.clear()
     for item in raw:
         centre = ProcurementCentre.model_validate(item)
-        centre.status = status_from_load(centre.loadPercent)
         centre.estimatedWaitMin = estimated_wait(
             centre.farmersWaiting, centre.activeCounters, centre.avgProcessingMin
         )
@@ -123,22 +114,24 @@ def seed_centres() -> None:
 
 
 def list_centres() -> list[ProcurementCentre]:
-    return [deepcopy(c) for c in _CENTRES.values()]
+    from .database import connection
+    from .mandi_state import project
+    with connection() as db:
+        return [project(db, ProcurementCentre.model_validate_json(row['payload']))
+                for row in db.execute('SELECT payload FROM mandis ORDER BY id').fetchall()]
 
 
 def get_centre(centre_id: str) -> ProcurementCentre | None:
-    centre = _CENTRES.get(centre_id)
-    return deepcopy(centre) if centre else None
+    return next((c for c in list_centres() if c.id == centre_id), None)
 
 
-def rank_alternatives(exclude_id: str, crop: str) -> list[ProcurementCentre]:
-    ranked = [
-        deepcopy(c)
-        for c in _CENTRES.values()
-        if c.id != exclude_id and crop in c.crops
-    ]
-    ranked.sort(key=lambda c: c.estimatedWaitMin + c.distanceKm)
-    return ranked
+def rank_alternatives(exclude_id: str, crop: str, day=None) -> list[ProcurementCentre]:
+    from .database import connection
+    from .mandi_state import ranked_alternatives
+    from .scheduling import IST
+    from datetime import datetime
+    with connection() as db:
+        return ranked_alternatives(db, exclude_id, crop, day or datetime.now(IST).date())
 
 
 seed_centres()

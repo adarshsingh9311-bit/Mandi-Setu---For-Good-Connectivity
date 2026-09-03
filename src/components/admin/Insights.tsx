@@ -6,6 +6,8 @@ import {
   indiaDay,
   type Analytics,
   type StaffNotifications,
+  type CommunicationActivity,
+  type MissedVisit,
   type Thresholds,
   type Visit,
 } from "@/services/adminService";
@@ -172,6 +174,8 @@ export function Monitoring({ waiting = false }: { waiting?: boolean }) {
 }
 export function Notifications() {
   const q = useAdmin<StaffNotifications>("notifications");
+  const activity = useAdmin<CommunicationActivity>("communications");
+  const missed = useAdmin<MissedVisit[]>("missed-slots");
   return (
     <div className="space-y-5">
       <LoadState pending={q.isPending} error={q.error} retry={q.refetch} />
@@ -207,6 +211,53 @@ export function Notifications() {
               { label: "Status", render: (r) => (r.resolved ? "Resolved" : "Open") },
             ]}
           />
+          <h2 className="font-semibold">Missed-slot recovery</h2>
+          <LoadState pending={missed.isPending} error={missed.error} retry={missed.refetch} />
+          {missed.data && (
+            <Table
+              rows={missed.data}
+              empty="No missed slots recorded."
+              columns={[
+                { label: "Farmer", render: (r) => r.farmer_id },
+                { label: "Mandi", render: (r) => r.centre_id },
+                { label: "Crop", render: (r) => r.crop_type },
+                { label: "Original slot", render: (r) => `${r.booking_day} · ${r.slot_label}` },
+                {
+                  label: "Recovery",
+                  render: (r) => (r.recovered_booking ? "Rebooked" : "Required"),
+                },
+              ]}
+            />
+          )}
+          <h2 className="font-semibold">SMS service activity</h2>
+          <LoadState pending={activity.isPending} error={activity.error} retry={activity.refetch} />
+          {activity.data && (
+            <Table
+              rows={activity.data.sms}
+              empty="No SMS events recorded yet."
+              columns={[
+                { label: "Time", render: (r) => timestamp(r.created_at) },
+                { label: "Recipient", render: (r) => r.recipient ?? "No mobile recorded" },
+                { label: "Message", render: (r) => r.message },
+                { label: "Provider", render: (r) => r.provider },
+                { label: "Status", render: (r) => r.status.replaceAll("_", " ") },
+              ]}
+            />
+          )}
+          <h2 className="font-semibold">IVR simulation activity</h2>
+          {activity.data && (
+            <Table
+              rows={activity.data.ivr}
+              empty="No IVR simulations recorded yet."
+              columns={[
+                { label: "Time", render: (r) => timestamp(r.created_at) },
+                { label: "Language", render: (r) => r.language },
+                { label: "Menu action", render: (r) => r.action },
+                { label: "Response", render: (r) => r.response },
+                { label: "Provider", render: (r) => r.provider },
+              ]}
+            />
+          )}
         </>
       )}
     </div>

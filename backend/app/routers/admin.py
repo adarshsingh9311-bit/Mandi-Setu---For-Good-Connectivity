@@ -31,6 +31,15 @@ def dashboard(day:date|None=None):
         mandis=ops.mandi_rows(db,day)
         return dict(day=str(day),metrics=ops.metrics(db,day),mandis=mandis,alerts=[dict(centreId=m['id'],title=f"{m['name']} is overloaded",workload=m['workload']) for m in mandis if m['status']=='Overloaded'])
 
+@router.post('/predictions/{centre_id}')
+def prediction(centre_id:str,horizonMin:int=60):
+    government()
+    if horizonMin < 15 or horizonMin > 360:raise HTTPException(422,'Horizon must be 15–360 minutes')
+    centre=get_centre(centre_id)
+    if not centre:raise HTTPException(404,'Mandi not found')
+    from ..predictions import forecast
+    with connection() as db:return forecast(db,ops.configured(db,centre),horizonMin)
+
 @router.get('/mandis')
 def mandis(day:date|None=None):
     with connection() as db:
@@ -46,8 +55,8 @@ def mandi(centre_id:str,day:date|None=None):
         return rows[0]
 
 @router.get('/mandis/{centre_id}/alternatives')
-def alternative_mandis(centre_id:str,day:date|None=None):
-    with connection() as db:return ops.alternatives(db,centre_id,day or today())
+def alternative_mandis(centre_id:str,day:date|None=None,crop:str|None=None):
+    with connection() as db:return ops.alternatives(db,centre_id,day or today(),crop)
 
 class MandiUpdate(BaseModel):
     model_config=ConfigDict(extra='forbid')
@@ -55,6 +64,7 @@ class MandiUpdate(BaseModel):
     processingMin:int=Field(gt=0,le=1440)
     activeCounters:int=Field(ge=0,le=1000)
     closed:bool=False
+    overloaded:bool=False
 
 @router.patch('/mandis/{centre_id}')
 def update_mandi(centre_id:str,payload:MandiUpdate):
@@ -65,7 +75,11 @@ def update_mandi(centre_id:str,payload:MandiUpdate):
         serving=db.execute("SELECT COUNT(*) FROM queue_tokens WHERE centre_id=? AND stage IN ('grading','weighing')",(centre_id,)).fetchone()[0]
         if payload.activeCounters<serving:raise HTTPException(409,'Cannot reduce counters below the number currently serving')
         db.execute('INSERT OR REPLACE INTO mandi_config VALUES (?,?,?,?,?)',(centre_id,payload.capacity,payload.processingMin,payload.activeCounters,int(payload.closed)))
+        db.execute('INSERT OR REPLACE INTO mandi_overrides VALUES (?,?)',(centre_id,int(payload.overloaded)))
         visit_events.event(db,centre_id,None,'mandi','Mandi configuration updated')
+        if payload.overloaded:
+            for booking in db.execute('SELECT farmer_id FROM bookings WHERE centre_id=?',(centre_id,)).fetchall():
+                notify(db,booking['farmer_id'],'centre','Mandi overload alert','Your mandi has been marked overloaded by staff. Check live alternative mandis before travelling.')
     return {'ok':True}
 
 @router.get('/queue')

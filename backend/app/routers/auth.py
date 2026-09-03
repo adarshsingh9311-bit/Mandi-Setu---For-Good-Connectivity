@@ -18,6 +18,7 @@ class Credentials(BaseModel):
 
 class Registration(Credentials):
     name: str = Field(min_length=1, max_length=100)
+    mobile: str = Field(default="", pattern=r"^$|^\+?[0-9][0-9 -]{7,17}$")
 
 
 @router.post("/register", status_code=201)
@@ -27,6 +28,12 @@ def register(payload: Registration):
     try:
         with connection() as db:
             user = create_account(db, payload.username.lower(), payload.password, payload.name.strip())
+            if payload.mobile:
+                import json
+                row = db.execute('SELECT payload FROM farmers WHERE id=?', (user['id'],)).fetchone()
+                profile = json.loads(row['payload'])
+                profile['mobile'] = payload.mobile
+                db.execute('UPDATE farmers SET payload=? WHERE id=?', (json.dumps(profile), user['id']))
             token = new_session(db, user["id"])
     except sqlite3.IntegrityError:
         raise HTTPException(409, "Username is unavailable")

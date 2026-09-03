@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
+from datetime import date
 
 from .. import store
 from ..models import ProcurementCentre
@@ -23,7 +24,8 @@ def get_centre(centre_id: str) -> ProcurementCentre:
 def list_alternatives(
     centre_id: str,
     crop: str = Query(..., min_length=1),
+    day: date | None = None,
 ) -> list[ProcurementCentre]:
     if store.get_centre(centre_id) is None:
         raise HTTPException(status_code=404, detail="Centre not found")
-    return store.rank_alternatives(centre_id, crop)
+    return store.rank_alternatives(centre_id, crop, day)

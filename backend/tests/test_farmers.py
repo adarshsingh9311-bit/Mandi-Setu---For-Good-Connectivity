@@ -34,6 +34,10 @@ class FarmerApiTests(unittest.TestCase):
             self.assertEqual(len(crops), len(before) + 1)
             self.assertIn(saved, crops)
             self.assertEqual(restarted.get("/api/centres").status_code, 200)
+            mandi = restarted.get('/api/centres/mandi-a').json()
+            self.assertEqual(mandi['operationalStatus'], 'Normal')
+            self.assertEqual(mandi['farmersWaiting'], 0)
+            self.assertGreater(mandi['availableCapacity'], 0)
 
     def test_invalid_registration_does_not_write(self):
         with TestClient(app) as client:

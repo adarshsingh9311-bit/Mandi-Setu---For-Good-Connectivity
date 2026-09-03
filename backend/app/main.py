@@ -6,6 +6,9 @@ Opaque sessions expire after eight hours and are revoked on logout.
 """
 
 from fastapi import FastAPI
+import os
+import asyncio
+from contextlib import suppress
 from fastapi import Request
 from starlette.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
@@ -23,12 +26,29 @@ from .routers.notifications import router as notifications_router
 from .routers.recovery import router as recovery_router
 from .routers.auth import router as auth_router
 from .routers.admin import router as admin_router
+from .routers.communications import router as communications_router
+from .routers.missed_slots import router as missed_slots_router
 from .database import initialize
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     initialize()
-    yield
+    async def operational_jobs():
+        from .missed_slots import sweep
+        while True:
+            try:
+                await run_in_threadpool(sweep)
+            except Exception:
+                import logging
+                logging.getLogger(__name__).exception('Operational reminder/recovery job failed')
+            await asyncio.sleep(60)
+    worker = asyncio.create_task(operational_jobs()) if os.environ.get('MANDISETU_JOBS_ENABLED')=='1' else None
+    try:
+        yield
+    finally:
+        if worker:
+            worker.cancel()
+            with suppress(asyncio.CancelledError):await worker
 
 
 app = FastAPI(title="KisanSetu API", version="0.7.0", lifespan=lifespan)
@@ -66,7 +86,7 @@ async def protect_api(request: Request, call_next):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
+    allow_origins=[origin.strip() for origin in os.environ.get('MANDISETU_CORS_ORIGINS','').split(',') if origin.strip()] + [
         "http://localhost:8080",
         "http://127.0.0.1:8080",
         "http://localhost:5173",
@@ -89,6 +109,8 @@ app.include_router(notifications_router)
 app.include_router(recovery_router)
 app.include_router(auth_router)
 app.include_router(admin_router)
+app.include_router(communications_router)
+app.include_router(missed_slots_router)
 
 
 @app.get("/health", response_model=HealthResponse)

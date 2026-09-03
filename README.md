@@ -249,3 +249,7 @@ Remaining scope: public backend deployment, production CORS, managed database/ba
 staff assignment UI, road-route travel times and external government integrations. Existing farmer demo
 overlays, profile editing and catalogue load labels retain their prototype behavior. The admin dashboard
 does not reuse those demo metrics. Historical missing measurements cannot be recovered retroactively.
+
+## Complete SIH workflow
+
+See [SIH_PROTOTYPE.md](SIH_PROTOTYPE.md) for the current shared-data integration, prediction baseline, SMS/IVR simulation, missed-slot recovery, API changes, environment variables, verification and presentation instructions.

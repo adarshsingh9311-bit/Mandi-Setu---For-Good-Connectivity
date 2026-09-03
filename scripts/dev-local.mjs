@@ -32,8 +32,8 @@ function stop(code = 0) {
   }
   process.exitCode = code;
 }
-function start(command, args, cwd) {
-  const child = spawn(command, args, { cwd, stdio: "inherit", windowsHide: true });
+function start(command, args, cwd, env = process.env) {
+  const child = spawn(command, args, { cwd, env, stdio: "inherit", windowsHide: true });
   children.push(child);
   child.on("error", (error) => {
     console.error(error.message);
@@ -50,6 +50,7 @@ start(
   python,
   ["-B", "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000"],
   resolve(root, "backend"),
+  { ...process.env, MANDISETU_JOBS_ENABLED: "1" },
 );
 let ready = false;
 for (let attempt = 0; attempt < 40 && !stopping; attempt++) {

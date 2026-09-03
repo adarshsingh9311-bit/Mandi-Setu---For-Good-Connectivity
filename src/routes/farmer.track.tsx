@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { apiGet } from "@/lib/api";
 import { Check, Circle, Clock, MapPin, Navigation, Truck } from "lucide-react";
 import { FarmerShell } from "@/components/farmer/FarmerShell";
 import { Button } from "@/components/ui/button";
@@ -26,16 +28,40 @@ export const Route = createFileRoute("/farmer/track")({
   component: TrackPage,
 });
 function TrackPage() {
-  const {
-    savedBooking,
-    bookingError,
-    reloadBooking,
-    centres,
-    journey,
-    journeyIndex,
-    advanceJourney,
-    etaMinutesLate,
-  } = useDemo();
+  const { savedBooking, bookingError, reloadBooking, centres } = useDemo();
+  const visits = useQuery({
+    queryKey: ["farmer-visits"],
+    queryFn: () =>
+      apiGet<
+        {
+          status: string;
+          booked_at: string | null;
+          arrived_at: string | null;
+          started_at: string | null;
+          completed_at: string | null;
+        }[]
+      >("/api/farmers/me/visits"),
+    refetchInterval: 5000,
+  });
+  const visit = visits.data?.[0];
+  const journey = [
+    { key: "booked", label: "Slot booked", time: visit?.booked_at },
+    { key: "arrived", label: "Checked in", time: visit?.arrived_at },
+    { key: "quality", label: "Quality check", time: visit?.started_at },
+    { key: "procurement", label: "Procurement", time: null },
+    { key: "completed", label: "Completed", time: visit?.completed_at },
+  ];
+  const journeyIndex =
+    (
+      {
+        Booked: 0,
+        "Checked In": 1,
+        Waiting: 1,
+        "Quality Check": 2,
+        Procurement: 3,
+        Completed: 4,
+      } as Record<string, number>
+    )[visit?.status ?? ""] ?? -1;
   const booking = savedBooking;
   if (bookingError || !booking)
     return (
@@ -68,9 +94,7 @@ function TrackPage() {
             </div>
             <div className="rounded-xl bg-primary-foreground/12 p-3">
               <p className="text-xs opacity-80">Arrival status</p>
-              <p className="mt-1 font-bold">
-                {etaMinutesLate ? `${etaMinutesLate} min delayed` : "On time"}
-              </p>
+              <p className="mt-1 font-bold">{visit?.status ?? "Not recorded"}</p>
             </div>
           </div>
         </CardContent>
@@ -106,7 +130,11 @@ function TrackPage() {
                       {step.label}
                     </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      {done ? step.time : "Pending"}
+                      {done
+                        ? step.time
+                          ? new Date(step.time).toLocaleString()
+                          : "Timestamp not recorded"
+                        : "Pending"}
                     </p>
                   </div>
                 </li>
@@ -116,15 +144,17 @@ function TrackPage() {
           <Button
             variant="outline"
             className="mt-5 w-full"
-            disabled={journeyIndex >= journey.length - 1}
-            onClick={advanceJourney}
+            disabled={visits.isFetching}
+            onClick={() => void visits.refetch()}
           >
-            <Navigation className="size-4" /> Update journey
+            <Navigation className="size-4" /> Refresh recorded journey
           </Button>
         </CardContent>
       </Card>
       <p className="mt-5 text-center text-xs text-muted-foreground">
-        Updates are based on demonstration data.
+        {visits.error
+          ? visits.error.message
+          : "Updates come from your saved booking and mandi operations."}
       </p>
     </FarmerShell>
   );

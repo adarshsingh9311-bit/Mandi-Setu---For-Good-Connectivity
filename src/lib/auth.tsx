@@ -73,7 +73,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
           body: JSON.stringify({
             username: form.get("username"),
             password: form.get("password"),
-            ...(register ? { name: form.get("name") } : {}),
+            ...(register ? { name: form.get("name"), mobile: form.get("mobile") } : {}),
           }),
         },
       );
@@ -128,15 +128,26 @@ export function AuthGate({ children }: { children: ReactNode }) {
         </h1>
         <form onSubmit={submit} className="space-y-4">
           {register && (
-            <label className="block">
-              Full name
-              <input
-                name="name"
-                required
-                maxLength={100}
-                className="block w-full rounded border p-2"
-              />
-            </label>
+            <>
+              <label className="block">
+                Full name
+                <input
+                  name="name"
+                  required
+                  maxLength={100}
+                  className="block w-full rounded border p-2"
+                />
+              </label>
+              <label className="block">
+                Mobile number (optional)
+                <input
+                  name="mobile"
+                  inputMode="tel"
+                  pattern="\+?[0-9][0-9 -]{7,17}"
+                  className="block w-full rounded border p-2"
+                />
+              </label>
+            </>
           )}
           <label className="block">
             Username
@@ -186,6 +197,18 @@ export function AuthGate({ children }: { children: ReactNode }) {
       : user.role === "farmer"
         ? path === "/" || path === "/farmer" || path.startsWith("/farmer/")
         : path === "/" || path.startsWith("/admin/") || path === "/admin" || path === "/operator";
+  if (
+    (path.startsWith("/farmer") && user.role !== "farmer") ||
+    ((path.startsWith("/admin") || path.startsWith("/government")) && user.role === "farmer")
+  ) {
+    const workspace = workspaceFor(user);
+    return (
+      <main className="space-y-4 p-8">
+        <p>This account does not have access to this workspace.</p>
+        <Link {...workspace}>Open your workspace</Link>
+      </main>
+    );
+  }
   return (
     <AuthContext.Provider value={user}>
       <div className="flex items-center justify-end gap-3 border-b p-2 text-sm">

@@ -13,7 +13,7 @@ export function StatusBadge({
   className,
 }: {
   status: CentreStatus;
-  label?: string;
+  label?: string | undefined;
   className?: string;
 }) {
   const cfg = map[status];

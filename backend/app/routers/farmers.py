@@ -10,6 +10,11 @@ from ..store import get_centre
 
 router = APIRouter(prefix="/api/farmers", tags=["farmers and crops"])
 
+@router.get('/me/visits')
+def visits():
+    with connection() as db:
+        return [dict(r) for r in db.execute('SELECT * FROM visits WHERE farmer_id=? ORDER BY rowid DESC',(current_farmer_id(),)).fetchall()]
+
 
 @router.get("/me", response_model=FarmerProfile)
 def get_profile():

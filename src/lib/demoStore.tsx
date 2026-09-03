@@ -9,7 +9,6 @@ import {
   type ReactNode,
 } from "react";
 import {
-  centres as fallbackCentres,
   currentFarmer,
   journeySteps,
   type AppNotification,
@@ -18,7 +17,7 @@ import {
 } from "@/data/mockData";
 import { notificationService } from "@/services/notificationService";
 import { farmerService, type FarmerProfile, type CropInput } from "@/services/farmerService";
-import { mandiService, statusFromLoad } from "@/services/mandiService";
+import { mandiService } from "@/services/mandiService";
 import { procurementService, type SavedBooking } from "@/services/procurementService";
 
 export type ScenarioId = "overload" | "weather" | "vehicle" | "alternative";
@@ -70,11 +69,29 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const user = useAuth();
   const [demoMode, setDemoMode] = useState(false);
   const [activeScenarios, setActiveScenarios] = useState<ScenarioId[]>([]);
-  const [sourceCentres, setSourceCentres] = useState<ProcurementCentre[]>(fallbackCentres);
-  const [loadOverrides, setLoadOverrides] = useState<Record<string, number>>({});
+  const [sourceCentres, setSourceCentres] = useState<ProcurementCentre[]>([]);
+  const [centreError, setCentreError] = useState<string | null>(null);
+  const [, setLoadOverrides] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    void mandiService.listCentres().then(setSourceCentres);
+    let active = true;
+    const refresh = async () => {
+      try {
+        const data = await mandiService.listCentres();
+        if (active) {
+          setSourceCentres(data);
+          setCentreError(null);
+        }
+      } catch {
+        if (active) setCentreError("Mandi information is unavailable. Retrying every 10 seconds.");
+      }
+    };
+    void refresh();
+    const timer = setInterval(() => void refresh(), 10_000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
   }, []);
   const [booking, setBooking] = useState<Booking>({
     centreId: "mandi-a",
@@ -92,7 +109,10 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     }
   }, []);
   useEffect(() => {
-    if (user.role === "farmer") void reloadBooking();
+    if (user.role !== "farmer") return;
+    void reloadBooking();
+    const timer = setInterval(() => void reloadBooking(), 10000);
+    return () => clearInterval(timer);
   }, [reloadBooking, user.role]);
   const [crops, setCrops] = useState<Crop[]>([]);
   const [farmer, setFarmer] = useState<FarmerProfile>({
@@ -175,21 +195,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     }
   }, [reloadNotifications, user.role]);
 
-  const centres = useMemo(
-    () =>
-      sourceCentres.map((c) => {
-        const load = loadOverrides[c.id] ?? c.loadPercent;
-        const factor = load / Math.max(c.loadPercent, 1);
-        return {
-          ...c,
-          loadPercent: load,
-          status: statusFromLoad(load),
-          estimatedWaitMin: Math.round(c.estimatedWaitMin * factor),
-          farmersWaiting: Math.round(c.farmersWaiting * factor),
-        };
-      }),
-    [loadOverrides, sourceCentres],
-  );
+  const centres = sourceCentres;
 
   const pushNotification = useCallback((n: AppNotification) => {
     setDemoNotifications((prev) => [n, ...prev]);
@@ -297,7 +303,22 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     ],
   );
 
-  return <DemoContext.Provider value={value}>{children}</DemoContext.Provider>;
+  return (
+    <DemoContext.Provider value={value}>
+      {centreError && (
+        <p role="alert" className="bg-amber-50 p-3 text-sm text-amber-900">
+          {centreError} Previously loaded data may be stale.
+        </p>
+      )}
+      {sourceCentres.length || user.role !== "farmer" ? (
+        children
+      ) : (
+        <p role="status" className="p-8">
+          Loading mandi information…
+        </p>
+      )}
+    </DemoContext.Provider>
+  );
 }
 
 export function useDemo() {

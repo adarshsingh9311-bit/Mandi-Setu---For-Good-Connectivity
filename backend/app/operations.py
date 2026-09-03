@@ -66,13 +66,15 @@ def mandi_rows(db,day,centre_id=None):
         centre=configured(db,original)
         count=db.execute("SELECT COUNT(*) FROM queue_tokens WHERE centre_id=? AND stage!='completed'",(centre.id,)).fetchone()[0]
         workload=round(count/max(1,centre.capacityPerDay)*100,1)
-        status='Closed' if centre.activeCounters==0 else 'Overloaded' if workload>thresholds['overloaded_percent'] else 'Busy' if workload>=thresholds['busy_percent'] else 'Normal'
+        from .mandi_state import status_for
+        status=status_for(db,workload,centre.activeCounters,centre.id)
         slots=slot_rows(db,centre.id,day)
         predicted=queue_prediction(db,centre).predictedMin
         result.append(dict(id=centre.id,name=centre.name,district=centre.district,state=centre.state,lat=centre.lat,lng=centre.lng,crops=centre.crops,
                            capacity=centre.capacityPerDay,queue=count,waitingMin=predicted,processingMin=centre.avgProcessingMin,
                            processingRate=round(centre.activeCounters*60/centre.avgProcessingMin,1),activeCounters=centre.activeCounters,
-                           workload=workload,availableSlots=sum(s['remaining'] for s in slots if s['available']),status=status))
+                           workload=workload,availableSlots=sum(s['remaining'] for s in slots if s['available']),status=status,
+                           overloadOverride=bool(db.execute('SELECT overloaded FROM mandi_overrides WHERE centre_id=?',(centre.id,)).fetchone()[0]) if db.execute('SELECT overloaded FROM mandi_overrides WHERE centre_id=?',(centre.id,)).fetchone() else False))
     return result
 
 def slot_rows(db,centre_id,day):
@@ -138,27 +140,10 @@ def analytics(db,start,end):
                 processingRatePerHour=round(len(done)/max(24,(end-start).days*24+24),3),
                 note='Measured times require recorded check-in and service timestamps. Historic missing timestamps and quantities are not inferred. Processing rate is completions per calendar hour in the selected interval.')
 
-def alternatives(db,centre_id,day):
+def alternatives(db,centre_id,day,crop=None):
     scope(centre_id)
-    source=get_centre(centre_id)
-    if not source:raise HTTPException(404,'Mandi not found')
-    # Operators may inspect alternative capacity, without access to other farmers or slots.
-    rows=[]
-    settings=dict(db.execute('SELECT * FROM operational_settings WHERE id=1').fetchone())
-    for c in list_centres():
-        if c.id==centre_id:continue
-        c=configured(db,c)
-        count=db.execute("SELECT COUNT(*) FROM queue_tokens WHERE centre_id=? AND stage!='completed'",(c.id,)).fetchone()[0]
-        if c.activeCounters==0 or count>=c.capacityPerDay:continue
-        if count/c.capacityPerDay*100>settings['overloaded_percent']:continue
-        common=sorted(set(c.crops)&set(source.crops))
-        if not common:continue
-        delta_lat=radians(c.lat-source.lat); delta_lng=radians(c.lng-source.lng)
-        hav=sin(delta_lat/2)**2+cos(radians(source.lat))*cos(radians(c.lat))*sin(delta_lng/2)**2
-        remaining=0
-        for s in definitions(db,c,day):
-            count_booked=db.execute('SELECT COUNT(*) FROM bookings WHERE centre_id=? AND day=? AND slot_id=?',(c.id,str(day),s['id'])).fetchone()[0]
-            if s['enabled'] and future(day,s):remaining+=max(0,s['capacity']-count_booked)
-        if remaining==0:continue
-        rows.append(dict(id=c.id,name=c.name,distanceKm=round(6371*2*asin(sqrt(min(1,hav))),1),waitingMin=queue_prediction(db,c).predictedMin,availableCapacity=c.capacityPerDay-count,availableSlots=remaining,crops=common,workload=round(count/c.capacityPerDay*100,1)))
-    return sorted(rows,key=lambda r:r['distanceKm'])
+    if not get_centre(centre_id):raise HTTPException(404,'Mandi not found')
+    from .mandi_state import ranked_alternatives
+    return [dict(id=c.id,name=c.name,distanceKm=c.distanceKm,waitingMin=c.estimatedWaitMin,
+                 availableCapacity=c.availableCapacity,availableSlots=c.availableSlots,crops=c.crops,
+                 workload=c.loadPercent) for c in ranked_alternatives(db,centre_id,crop,day)]

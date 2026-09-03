@@ -3,6 +3,7 @@ import { Mandis } from "@/components/admin/Overview";
 import { CommandCentre } from "@/components/government/CommandCentre";
 import { QueueManagement, SlotManagement, FarmerManagement } from "@/components/admin/Management";
 import { Monitoring, Notifications, Reports, Settings } from "@/components/admin/Insights";
+import { Predictions } from "@/components/admin/Predictions";
 export const Route = createFileRoute("/admin/$section")({ component: AdminPage });
 const pages = {
   dashboard: ["Procurement Command Centre", CommandCentre],
@@ -11,7 +12,15 @@ const pages = {
   slots: ["Slot management", SlotManagement],
   farmers: ["Farmer management", FarmerManagement],
   procurement: ["Procurement monitoring", Monitoring],
-  analytics: ["Waiting-time analytics", () => <Monitoring waiting />],
+  analytics: [
+    "Waiting-time analytics",
+    () => (
+      <div className="space-y-6">
+        <Predictions />
+        <Monitoring waiting />
+      </div>
+    ),
+  ],
   notifications: ["Notifications", Notifications],
   reports: ["Reports", Reports],
   settings: ["Settings", Settings],

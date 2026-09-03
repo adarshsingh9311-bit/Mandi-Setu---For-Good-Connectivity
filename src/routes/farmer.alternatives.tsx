@@ -27,28 +27,45 @@ export const Route = createFileRoute("/farmer/alternatives")({
 });
 
 function AlternativesPage() {
-  const { centres, booking, setBooking, pushNotification } = useDemo();
+  const { centres, booking, savedBooking, crops, setBooking } = useDemo();
   const navigate = useNavigate();
-  const current = centres.find((c) => c.id === booking.centreId) ?? centres[0]!;
-  const [ranked, setRanked] = useState(() =>
-    mandiService
-      .rankAlternatives(current.id, "Wheat")
-      .map((c) => centres.find((x) => x.id === c.id) ?? c)
-      .sort((a, b) => a.estimatedWaitMin - b.estimatedWaitMin),
-  );
+  const current =
+    centres.find((c) => c.id === (savedBooking?.centreId ?? booking.centreId)) ?? centres[0]!;
+  const crop = crops.find((c) => c.id === savedBooking?.cropId)?.type ?? crops[0]?.type;
+  const [ranked, setRanked] = useState<typeof centres>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void mandiService.listAlternatives(current.id, "Wheat").then((list) => {
-      setRanked(
-        list
-          .map((c) => centres.find((x) => x.id === c.id) ?? c)
-          .sort((a, b) => a.estimatedWaitMin - b.estimatedWaitMin),
-      );
-    });
-  }, [centres, current.id]);
+    let active = true;
+    if (!crop) return;
+    void mandiService
+      .listAlternatives(current.id, crop, savedBooking?.day)
+      .then((list) => {
+        if (active) {
+          setRanked(list);
+          setError(null);
+        }
+      })
+      .catch(() => {
+        if (active) setError("Could not refresh alternatives. Please retry shortly.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [centres, current.id, crop, savedBooking?.day]);
 
   const best = ranked[0];
-  if (!best) return null;
+  if (!best || error)
+    return (
+      <FarmerShell title="Alternative Centres" back="/farmer">
+        <p role="status">
+          {error ??
+            (crop
+              ? "No eligible alternative has capacity and future slots today."
+              : "Register a crop to see eligible alternatives.")}
+        </p>
+      </FarmerShell>
+    );
 
   const switchCentre = () => {
     setBooking({ centreId: best.id, slot: "—", status: "Slot Pending" });
@@ -61,8 +78,7 @@ function AlternativesPage() {
         <CardContent className="space-y-3 p-4">
           <h2 className="flex items-center gap-2 text-lg font-bold text-status-over">
             <AlertTriangle className="size-5" aria-hidden="true" />
-            {current.name.split(" — ")[0]}{" "}
-            {current.status === "over" ? "Has Become Overloaded" : "Is Under Pressure"}
+            {current.name.split(" — ")[0]} · {current.operationalStatus ?? current.status}
           </h2>
           <dl className="grid grid-cols-2 gap-3 text-sm">
             <div className="rounded-lg bg-card px-3 py-2">
@@ -76,7 +92,7 @@ function AlternativesPage() {
               </dd>
             </div>
           </dl>
-          <LoadBar value={current.loadPercent} />
+          <LoadBar value={current.loadPercent} status={current.status} />
         </CardContent>
       </Card>
 

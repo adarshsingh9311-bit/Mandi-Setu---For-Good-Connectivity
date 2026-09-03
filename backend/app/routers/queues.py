@@ -10,6 +10,7 @@ from ..database import connection
 from ..store import get_centre
 from ..predictions import queue_prediction
 from ..notifications import notify
+from ..scheduling import IST
 
 router = APIRouter(prefix="/api/queues", tags=["queues"])
 
@@ -63,6 +64,17 @@ def join_queue(centre_id: str):
             cursor = db.execute("INSERT INTO queue_tokens (farmer_id, centre_id, updated_at) VALUES (?, ?, ?)", (current_farmer_id(), centre_id, timestamp()))
             row = db.execute("SELECT * FROM queue_tokens WHERE id = ?", (cursor.lastrowid,)).fetchone()
             visit_events.checked_in(db, row)
+            count=db.execute("SELECT COUNT(*) FROM queue_tokens WHERE centre_id=? AND stage!='completed'",(centre_id,)).fetchone()[0]
+            from ..operations import configured
+            configured_centre=configured(db,centre)
+            threshold=db.execute('SELECT overloaded_percent FROM operational_settings WHERE id=1').fetchone()[0]
+            previous=max(0,count-1)/max(1,configured_centre.capacityPerDay)*100
+            current=count/max(1,configured_centre.capacityPerDay)*100
+            if previous<=threshold<current:
+                key=f"overload:{centre_id}:{datetime.now(IST).date()}"
+                if db.execute('INSERT OR IGNORE INTO delivery_keys VALUES (?)',(key,)).rowcount:
+                    for booking in db.execute('SELECT farmer_id FROM bookings WHERE centre_id=?',(centre_id,)).fetchall():
+                        notify(db,booking['farmer_id'],'centre','Mandi overload detected','Live queue load crossed the configured threshold. Check alternate mandis before travelling.')
         return snapshot(db, row, centre)
 
 

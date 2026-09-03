@@ -115,6 +115,7 @@ export function MandiDetail({ mandi, day }: { mandi: Mandi; day: string }) {
                 processingMin: Number(f.get("processing")),
                 activeCounters: Number(f.get("counters")),
                 closed: f.get("closed") === "on",
+                overloaded: f.get("overloaded") === "on",
               });
             }}
           >
@@ -155,6 +156,10 @@ export function MandiDetail({ mandi, day }: { mandi: Mandi; day: string }) {
               <label className="flex items-center gap-2 text-sm">
                 <input name="closed" type="checkbox" defaultChecked={mandi.status === "Closed"} />
                 Mandi closed
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input name="overloaded" type="checkbox" defaultChecked={mandi.overloadOverride} />
+                Staff overload override
               </label>
               <Button disabled={update.isPending}>Save configuration</Button>
             </div>

@@ -19,6 +19,10 @@ export interface ProcurementCentre {
   status: CentreStatus;
   lat: number;
   lng: number;
+  operationalStatus?: string;
+  availableCapacity?: number;
+  availableSlots?: number;
+  waitAvailable?: boolean;
 }
 
 export interface Farmer {

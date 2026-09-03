@@ -4,6 +4,25 @@ from uuid import uuid4
 
 
 def migrate(db):
+    db.execute("CREATE TABLE IF NOT EXISTS missed_recoveries (visit_id TEXT PRIMARY KEY, booking TEXT NOT NULL, recovered_at TEXT NOT NULL)")
+    db.execute("CREATE TABLE IF NOT EXISTS delivery_keys (key TEXT PRIMARY KEY)")
+    db.execute("CREATE TABLE IF NOT EXISTS mandi_overrides (centre_id TEXT PRIMARY KEY, overloaded INTEGER NOT NULL DEFAULT 0)")
+    from .store import _CENTRES
+    db.execute("CREATE TABLE IF NOT EXISTS mandis (id TEXT PRIMARY KEY, payload TEXT NOT NULL)")
+    for centre in _CENTRES.values():
+        db.execute("INSERT OR IGNORE INTO mandis VALUES (?, ?)", (centre.id, centre.model_dump_json()))
+    db.execute("""CREATE TABLE IF NOT EXISTS prediction_records (
+        id TEXT PRIMARY KEY, centre_id TEXT NOT NULL, model_version TEXT NOT NULL,
+        horizon_min INTEGER NOT NULL, inputs TEXT NOT NULL, output TEXT NOT NULL, created_at TEXT NOT NULL)""")
+    db.execute("""CREATE TABLE IF NOT EXISTS communication_events (
+        id TEXT PRIMARY KEY, farmer_id TEXT, channel TEXT NOT NULL, event_type TEXT NOT NULL,
+        recipient TEXT, message TEXT NOT NULL, provider TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL)""")
+    db.execute("""CREATE TABLE IF NOT EXISTS ivr_sessions (
+        id TEXT PRIMARY KEY, farmer_id TEXT NOT NULL, language TEXT NOT NULL,
+        action TEXT NOT NULL, response TEXT NOT NULL, provider TEXT NOT NULL, created_at TEXT NOT NULL)""")
+    db.execute("""CREATE TABLE IF NOT EXISTS redirect_requests (
+        id TEXT PRIMARY KEY, farmer_id TEXT NOT NULL, source_centre_id TEXT NOT NULL,
+        destination_centre_id TEXT NOT NULL, status TEXT NOT NULL, reason TEXT NOT NULL, created_at TEXT NOT NULL)""")
     db.execute("CREATE TABLE IF NOT EXISTS account_roles (account_id TEXT PRIMARY KEY REFERENCES accounts(id), role TEXT NOT NULL CHECK(role IN ('government', 'super_admin')))")
     db.execute("CREATE TABLE IF NOT EXISTS mandi_config (centre_id TEXT PRIMARY KEY, capacity INTEGER NOT NULL CHECK(capacity > 0), processing_min INTEGER NOT NULL CHECK(processing_min > 0), counters INTEGER NOT NULL CHECK(counters >= 0), closed INTEGER NOT NULL DEFAULT 0)")
     db.execute("CREATE TABLE IF NOT EXISTS operational_settings (id INTEGER PRIMARY KEY CHECK(id=1), busy_percent REAL NOT NULL, overloaded_percent REAL NOT NULL)")

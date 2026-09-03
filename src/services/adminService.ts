@@ -16,6 +16,7 @@ export interface Mandi {
   availableSlots: number;
   status: string;
   crops: string[];
+  overloadOverride: boolean;
 }
 export interface Visit {
   id: string;
@@ -132,6 +133,33 @@ export interface StaffNotifications {
 export interface Thresholds {
   busyPercent: number;
   overloadedPercent: number;
+}
+export interface CommunicationActivity {
+  sms: {
+    id: string;
+    recipient: string | null;
+    message: string;
+    provider: string;
+    status: string;
+    created_at: string;
+  }[];
+  ivr: {
+    id: string;
+    language: string;
+    action: string;
+    response: string;
+    provider: string;
+    created_at: string;
+  }[];
+}
+export interface MissedVisit {
+  id: string;
+  farmer_id: string;
+  centre_id: string;
+  crop_type: string;
+  booking_day: string;
+  slot_label: string;
+  recovered_booking: string | null;
 }
 export function queryString(values: Record<string, string>) {
   const q = new URLSearchParams();

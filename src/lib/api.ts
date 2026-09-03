@@ -1,4 +1,5 @@
-const DEFAULT_API_URL = import.meta.env.DEV ? "" : "http://127.0.0.1:8000";
+// Same-origin /api in both environments; production can explicitly override this.
+const DEFAULT_API_URL = "";
 
 export function apiBase(): string {
   return (

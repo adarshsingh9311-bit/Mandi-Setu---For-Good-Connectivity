@@ -83,6 +83,11 @@ def save_booking(db,payload,centre):
     db.execute('INSERT OR REPLACE INTO bookings VALUES (?,?,?,?,?)',(farmer,payload.cropId,payload.centreId,str(payload.day),payload.slotId))
     crop_status(db,payload.cropId,'Slot Confirmed')
     visit_events.booked(db,farmer,payload,slot['window'])
+    if old and old['centre_id'] != payload.centreId:
+        from uuid import uuid4
+        db.execute('INSERT INTO redirect_requests VALUES (?,?,?,?,?,?,?)',
+                   (str(uuid4()),farmer,old['centre_id'],payload.centreId,'Accepted','Farmer confirmed a booking at an alternate mandi',datetime.now(IST).isoformat()))
+        notify(db,farmer,'centre','Alternate mandi confirmed',f'Your new booking is at {centre.name}.')
     notify(db,farmer,'slot','Slot confirmed',f"Your slot is confirmed for {payload.day} at {centre.name}: {slot['window']}.")
     return result(db.execute('SELECT * FROM bookings WHERE farmer_id=?',(farmer,)).fetchone())
 

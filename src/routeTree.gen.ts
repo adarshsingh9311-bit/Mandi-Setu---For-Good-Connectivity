@@ -18,6 +18,10 @@ import { Route as AdminSectionRouteImport } from './routes/admin.$section'
 import { Route as FarmerIndexRouteImport } from './routes/farmer.index'
 import { Route as FarmerAlternativesRouteImport } from './routes/farmer.alternatives'
 import { Route as FarmerCropRouteImport } from './routes/farmer.crop'
+import { Route as FarmerDashboardRouteImport } from './routes/farmer.dashboard'
+import { Route as FarmerIvrRouteImport } from './routes/farmer.ivr'
+import { Route as FarmerLoginRouteImport } from './routes/farmer.login'
+import { Route as FarmerMissedSlotsRouteImport } from './routes/farmer.missed-slots'
 import { Route as FarmerNotificationsRouteImport } from './routes/farmer.notifications'
 import { Route as FarmerProcurementRouteImport } from './routes/farmer.procurement'
 import { Route as FarmerProfileRouteImport } from './routes/farmer.profile'
@@ -25,6 +29,8 @@ import { Route as FarmerQueueRouteImport } from './routes/farmer.queue'
 import { Route as FarmerReportDelayRouteImport } from './routes/farmer.report-delay'
 import { Route as FarmerSlotRouteImport } from './routes/farmer.slot'
 import { Route as FarmerTrackRouteImport } from './routes/farmer.track'
+import { Route as GovernmentDashboardRouteImport } from './routes/government.dashboard'
+import { Route as GovernmentLoginRouteImport } from './routes/government.login'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -71,6 +77,26 @@ const FarmerCropRoute = FarmerCropRouteImport.update({
   path: '/crop',
   getParentRoute: () => FarmerRoute,
 } as any)
+const FarmerDashboardRoute = FarmerDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => FarmerRoute,
+} as any)
+const FarmerIvrRoute = FarmerIvrRouteImport.update({
+  id: '/ivr',
+  path: '/ivr',
+  getParentRoute: () => FarmerRoute,
+} as any)
+const FarmerLoginRoute = FarmerLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => FarmerRoute,
+} as any)
+const FarmerMissedSlotsRoute = FarmerMissedSlotsRouteImport.update({
+  id: '/missed-slots',
+  path: '/missed-slots',
+  getParentRoute: () => FarmerRoute,
+} as any)
 const FarmerNotificationsRoute = FarmerNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
@@ -106,6 +132,16 @@ const FarmerTrackRoute = FarmerTrackRouteImport.update({
   path: '/track',
   getParentRoute: () => FarmerRoute,
 } as any)
+const GovernmentDashboardRoute = GovernmentDashboardRouteImport.update({
+  id: '/government/dashboard',
+  path: '/government/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GovernmentLoginRoute = GovernmentLoginRouteImport.update({
+  id: '/government/login',
+  path: '/government/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -115,6 +151,10 @@ export interface FileRoutesByFullPath {
   '/admin/$section': typeof AdminSectionRoute
   '/farmer/alternatives': typeof FarmerAlternativesRoute
   '/farmer/crop': typeof FarmerCropRoute
+  '/farmer/dashboard': typeof FarmerDashboardRoute
+  '/farmer/ivr': typeof FarmerIvrRoute
+  '/farmer/login': typeof FarmerLoginRoute
+  '/farmer/missed-slots': typeof FarmerMissedSlotsRoute
   '/farmer/notifications': typeof FarmerNotificationsRoute
   '/farmer/procurement': typeof FarmerProcurementRoute
   '/farmer/profile': typeof FarmerProfileRoute
@@ -122,6 +162,8 @@ export interface FileRoutesByFullPath {
   '/farmer/report-delay': typeof FarmerReportDelayRoute
   '/farmer/slot': typeof FarmerSlotRoute
   '/farmer/track': typeof FarmerTrackRoute
+  '/government/dashboard': typeof GovernmentDashboardRoute
+  '/government/login': typeof GovernmentLoginRoute
   '/admin/': typeof AdminIndexRoute
   '/farmer/': typeof FarmerIndexRoute
 }
@@ -131,6 +173,10 @@ export interface FileRoutesByTo {
   '/admin/$section': typeof AdminSectionRoute
   '/farmer/alternatives': typeof FarmerAlternativesRoute
   '/farmer/crop': typeof FarmerCropRoute
+  '/farmer/dashboard': typeof FarmerDashboardRoute
+  '/farmer/ivr': typeof FarmerIvrRoute
+  '/farmer/login': typeof FarmerLoginRoute
+  '/farmer/missed-slots': typeof FarmerMissedSlotsRoute
   '/farmer/notifications': typeof FarmerNotificationsRoute
   '/farmer/procurement': typeof FarmerProcurementRoute
   '/farmer/profile': typeof FarmerProfileRoute
@@ -138,6 +184,8 @@ export interface FileRoutesByTo {
   '/farmer/report-delay': typeof FarmerReportDelayRoute
   '/farmer/slot': typeof FarmerSlotRoute
   '/farmer/track': typeof FarmerTrackRoute
+  '/government/dashboard': typeof GovernmentDashboardRoute
+  '/government/login': typeof GovernmentLoginRoute
   '/admin': typeof AdminIndexRoute
   '/farmer': typeof FarmerIndexRoute
 }
@@ -150,6 +198,10 @@ export interface FileRoutesById {
   '/admin/$section': typeof AdminSectionRoute
   '/farmer/alternatives': typeof FarmerAlternativesRoute
   '/farmer/crop': typeof FarmerCropRoute
+  '/farmer/dashboard': typeof FarmerDashboardRoute
+  '/farmer/ivr': typeof FarmerIvrRoute
+  '/farmer/login': typeof FarmerLoginRoute
+  '/farmer/missed-slots': typeof FarmerMissedSlotsRoute
   '/farmer/notifications': typeof FarmerNotificationsRoute
   '/farmer/procurement': typeof FarmerProcurementRoute
   '/farmer/profile': typeof FarmerProfileRoute
@@ -157,6 +209,8 @@ export interface FileRoutesById {
   '/farmer/report-delay': typeof FarmerReportDelayRoute
   '/farmer/slot': typeof FarmerSlotRoute
   '/farmer/track': typeof FarmerTrackRoute
+  '/government/dashboard': typeof GovernmentDashboardRoute
+  '/government/login': typeof GovernmentLoginRoute
   '/admin/': typeof AdminIndexRoute
   '/farmer/': typeof FarmerIndexRoute
 }
@@ -170,6 +224,10 @@ export interface FileRouteTypes {
     | '/admin/$section'
     | '/farmer/alternatives'
     | '/farmer/crop'
+    | '/farmer/dashboard'
+    | '/farmer/ivr'
+    | '/farmer/login'
+    | '/farmer/missed-slots'
     | '/farmer/notifications'
     | '/farmer/procurement'
     | '/farmer/profile'
@@ -177,6 +235,8 @@ export interface FileRouteTypes {
     | '/farmer/report-delay'
     | '/farmer/slot'
     | '/farmer/track'
+    | '/government/dashboard'
+    | '/government/login'
     | '/admin/'
     | '/farmer/'
   fileRoutesByTo: FileRoutesByTo
@@ -186,6 +246,10 @@ export interface FileRouteTypes {
     | '/admin/$section'
     | '/farmer/alternatives'
     | '/farmer/crop'
+    | '/farmer/dashboard'
+    | '/farmer/ivr'
+    | '/farmer/login'
+    | '/farmer/missed-slots'
     | '/farmer/notifications'
     | '/farmer/procurement'
     | '/farmer/profile'
@@ -193,6 +257,8 @@ export interface FileRouteTypes {
     | '/farmer/report-delay'
     | '/farmer/slot'
     | '/farmer/track'
+    | '/government/dashboard'
+    | '/government/login'
     | '/admin'
     | '/farmer'
   id:
@@ -204,6 +270,10 @@ export interface FileRouteTypes {
     | '/admin/$section'
     | '/farmer/alternatives'
     | '/farmer/crop'
+    | '/farmer/dashboard'
+    | '/farmer/ivr'
+    | '/farmer/login'
+    | '/farmer/missed-slots'
     | '/farmer/notifications'
     | '/farmer/procurement'
     | '/farmer/profile'
@@ -211,6 +281,8 @@ export interface FileRouteTypes {
     | '/farmer/report-delay'
     | '/farmer/slot'
     | '/farmer/track'
+    | '/government/dashboard'
+    | '/government/login'
     | '/admin/'
     | '/farmer/'
   fileRoutesById: FileRoutesById
@@ -220,6 +292,8 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   FarmerRoute: typeof FarmerRouteWithChildren
   OperatorRoute: typeof OperatorRoute
+  GovernmentDashboardRoute: typeof GovernmentDashboardRoute
+  GovernmentLoginRoute: typeof GovernmentLoginRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -287,6 +361,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FarmerCropRouteImport
       parentRoute: typeof FarmerRoute
     }
+    '/farmer/dashboard': {
+      id: '/farmer/dashboard'
+      path: '/dashboard'
+      fullPath: '/farmer/dashboard'
+      preLoaderRoute: typeof FarmerDashboardRouteImport
+      parentRoute: typeof FarmerRoute
+    }
+    '/farmer/ivr': {
+      id: '/farmer/ivr'
+      path: '/ivr'
+      fullPath: '/farmer/ivr'
+      preLoaderRoute: typeof FarmerIvrRouteImport
+      parentRoute: typeof FarmerRoute
+    }
+    '/farmer/login': {
+      id: '/farmer/login'
+      path: '/login'
+      fullPath: '/farmer/login'
+      preLoaderRoute: typeof FarmerLoginRouteImport
+      parentRoute: typeof FarmerRoute
+    }
+    '/farmer/missed-slots': {
+      id: '/farmer/missed-slots'
+      path: '/missed-slots'
+      fullPath: '/farmer/missed-slots'
+      preLoaderRoute: typeof FarmerMissedSlotsRouteImport
+      parentRoute: typeof FarmerRoute
+    }
     '/farmer/notifications': {
       id: '/farmer/notifications'
       path: '/notifications'
@@ -336,6 +438,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FarmerTrackRouteImport
       parentRoute: typeof FarmerRoute
     }
+    '/government/dashboard': {
+      id: '/government/dashboard'
+      path: '/government/dashboard'
+      fullPath: '/government/dashboard'
+      preLoaderRoute: typeof GovernmentDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/government/login': {
+      id: '/government/login'
+      path: '/government/login'
+      fullPath: '/government/login'
+      preLoaderRoute: typeof GovernmentLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -354,6 +470,10 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 interface FarmerRouteChildren {
   FarmerAlternativesRoute: typeof FarmerAlternativesRoute
   FarmerCropRoute: typeof FarmerCropRoute
+  FarmerDashboardRoute: typeof FarmerDashboardRoute
+  FarmerIvrRoute: typeof FarmerIvrRoute
+  FarmerLoginRoute: typeof FarmerLoginRoute
+  FarmerMissedSlotsRoute: typeof FarmerMissedSlotsRoute
   FarmerNotificationsRoute: typeof FarmerNotificationsRoute
   FarmerProcurementRoute: typeof FarmerProcurementRoute
   FarmerProfileRoute: typeof FarmerProfileRoute
@@ -367,6 +487,10 @@ interface FarmerRouteChildren {
 const FarmerRouteChildren: FarmerRouteChildren = {
   FarmerAlternativesRoute: FarmerAlternativesRoute,
   FarmerCropRoute: FarmerCropRoute,
+  FarmerDashboardRoute: FarmerDashboardRoute,
+  FarmerIvrRoute: FarmerIvrRoute,
+  FarmerLoginRoute: FarmerLoginRoute,
+  FarmerMissedSlotsRoute: FarmerMissedSlotsRoute,
   FarmerNotificationsRoute: FarmerNotificationsRoute,
   FarmerProcurementRoute: FarmerProcurementRoute,
   FarmerProfileRoute: FarmerProfileRoute,
@@ -385,6 +509,8 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   FarmerRoute: FarmerRouteWithChildren,
   OperatorRoute: OperatorRoute,
+  GovernmentDashboardRoute: GovernmentDashboardRoute,
+  GovernmentLoginRoute: GovernmentLoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

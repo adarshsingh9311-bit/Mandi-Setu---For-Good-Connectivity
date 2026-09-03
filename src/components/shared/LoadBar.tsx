@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { statusFromLoad } from "@/services/mandiService";
+import type { CentreStatus } from "@/data/mockData";
 
 const barColor = {
   normal: "bg-status-normal",
@@ -7,8 +7,15 @@ const barColor = {
   over: "bg-status-over",
 } as const;
 
-export function LoadBar({ value, className }: { value: number; className?: string }) {
-  const status = statusFromLoad(value);
+export function LoadBar({
+  value,
+  status,
+  className,
+}: {
+  value: number;
+  status: CentreStatus;
+  className?: string;
+}) {
   return (
     <div
       className={cn("h-2.5 w-full overflow-hidden rounded-full bg-muted", className)}

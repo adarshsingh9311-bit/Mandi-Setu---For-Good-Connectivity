@@ -1,5 +1,4 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { DemoModePanel } from "@/components/shared/DemoModePanel";
 
 export const Route = createFileRoute("/farmer")({
   head: () => ({
@@ -13,7 +12,8 @@ export const Route = createFileRoute("/farmer")({
       { property: "og:title", content: "Farmer Portal — KisanSetu" },
       {
         property: "og:description",
-        content: "Live queue visibility, smart procurement slots and alternative mandi recommendations.",
+        content:
+          "Live queue visibility, smart procurement slots and alternative mandi recommendations.",
       },
     ],
   }),
@@ -24,7 +24,6 @@ function FarmerLayout() {
   return (
     <>
       <Outlet />
-      <DemoModePanel />
     </>
   );
 }

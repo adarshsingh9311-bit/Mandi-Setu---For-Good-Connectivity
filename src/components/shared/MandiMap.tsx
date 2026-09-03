@@ -70,7 +70,7 @@ export function MandiMap({ centres }: { centres: ProcurementCentre[] }) {
             <h3 className="text-base font-bold">{centre.name}</h3>
             <StatusBadge status={centre.status} />
           </div>
-          <LoadBar value={centre.loadPercent} />
+          <LoadBar value={centre.loadPercent} status={centre.status} />
           <dl className="grid grid-cols-2 gap-2 text-sm">
             {[
               ["Current load", `${centre.loadPercent}%`],

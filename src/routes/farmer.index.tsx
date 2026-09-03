@@ -30,6 +30,8 @@ const quickActions = [
   { to: "/farmer/procurement", key: "bookSlot", icon: CalendarClock },
   { to: "/farmer/alternatives", key: "findBetterCentre", icon: Compass },
   { to: "/farmer/report-delay", key: "reportDelay", icon: TriangleAlert },
+  { to: "/farmer/ivr", key: "IVR demo", icon: Clock },
+  { to: "/farmer/missed-slots", key: "Recover missed slot", icon: CalendarClock },
 ] as const;
 
 function FarmerHome() {
@@ -137,11 +139,11 @@ function FarmerHome() {
                 <h3 className="font-bold">{t("centreLoadIncreased")}</h3>
                 <p className="text-sm text-muted-foreground">{t("centreLoadIncreasedBody")}</p>
                 <div className="mt-2">
-                  <StatusBadge status={centre.status} />
+                  <StatusBadge status={centre.status} label={centre.operationalStatus} />
                 </div>
               </div>
             </div>
-            <LoadBar value={centre.loadPercent} />
+            <LoadBar value={centre.loadPercent} status={centre.status} />
             <Button asChild className="w-full" size="lg">
               <Link to="/farmer/alternatives">
                 {t("checkAlternatives")} <ArrowRight className="size-4" />

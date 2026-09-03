@@ -18,11 +18,15 @@ class ProcurementCentre(BaseModel):
     activeCounters: int
     processingRatePerHour: int
     avgProcessingMin: int
-    loadPercent: int
+    loadPercent: float
     estimatedWaitMin: int
     status: CentreStatus
     lat: float
     lng: float
+    operationalStatus: str = "Normal"
+    availableCapacity: int = 0
+    availableSlots: int = 0
+    waitAvailable: bool = True
 
 
 class HealthResponse(BaseModel):
