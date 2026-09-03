@@ -137,6 +137,8 @@ operational counts are computed from actual records. Old data is not dropped.
   selects PostgreSQL whenever `DATABASE_URL` is present.
 - `VITE_API_URL`: optional frontend build-time HTTPS API origin. Unset uses
   same-origin `/api`; production no longer falls back to localhost.
+  The Vercel production build uses `https://mandisetu-api.onrender.com` from
+  `.env.production`; this is a public service origin, not a secret.
 - `MANDISETU_CORS_ORIGINS`: comma-separated authorized production frontend origins.
 - `MANDISETU_JOBS_ENABLED=1`: enable scheduled reminders and missed-slot expiry.
   The combined local launcher enables it automatically.
