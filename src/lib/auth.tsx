@@ -34,6 +34,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const client = useQueryClient();
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const staffPortal =
+    path.startsWith("/government") || path.startsWith("/admin") || path === "/operator";
+  useEffect(() => {
+    if (staffPortal) setRegister(false);
+  }, [staffPortal]);
   useEffect(() => {
     let mounted = true;
     const expire = () => {
@@ -73,6 +78,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
           body: JSON.stringify({
             username: form.get("username"),
             password: form.get("password"),
+            portal: staffPortal ? "staff" : "farmer",
             ...(register ? { name: form.get("name"), mobile: form.get("mobile") } : {}),
           }),
         },
@@ -122,10 +128,16 @@ export function AuthGate({ children }: { children: ReactNode }) {
           MandiSetu ·{" "}
           {register
             ? "Create farmer account"
-            : path.startsWith("/admin") || path === "/operator"
+            : staffPortal
               ? "Government / Mandi sign in"
               : "Farmer sign in"}
         </h1>
+        {staffPortal && (
+          <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-950">
+            Sign in with an authorized Mandi Operator, Government Officer, or Super Admin account.
+            Staff accounts are issued by the system administrator.
+          </p>
+        )}
         <form onSubmit={submit} className="space-y-4">
           {register && (
             <>
@@ -179,24 +191,33 @@ export function AuthGate({ children }: { children: ReactNode }) {
           </Button>
         </form>
         {error && <p role="alert">{error}</p>}
-        <Button
-          variant="link"
-          disabled={pending}
-          onClick={() => {
-            setRegister(!register);
-            setError("");
-          }}
-        >
-          {register ? "Already registered? Sign in" : "Create a farmer account"}
-        </Button>
+        {!staffPortal && (
+          <Button
+            variant="link"
+            disabled={pending}
+            onClick={() => {
+              setRegister(!register);
+              setError("");
+            }}
+          >
+            {register ? "Already registered? Sign in" : "Create a farmer account"}
+          </Button>
+        )}
       </main>
     );
   const allowed =
     user.role === "operator"
-      ? path === "/operator" || path === "/" || /^\/admin\/(mandis|queue|slots)\/?$/.test(path)
+      ? path === "/operator" ||
+        path === "/" ||
+        path.startsWith("/government/") ||
+        /^\/admin\/(mandis|queue|slots)\/?$/.test(path)
       : user.role === "farmer"
         ? path === "/" || path === "/farmer" || path.startsWith("/farmer/")
-        : path === "/" || path.startsWith("/admin/") || path === "/admin" || path === "/operator";
+        : path === "/" ||
+          path.startsWith("/admin/") ||
+          path === "/admin" ||
+          path === "/operator" ||
+          path.startsWith("/government/");
   if (
     (path.startsWith("/farmer") && user.role !== "farmer") ||
     ((path.startsWith("/admin") || path.startsWith("/government")) && user.role === "farmer")

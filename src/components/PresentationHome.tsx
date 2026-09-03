@@ -116,7 +116,7 @@ export function PresentationHome() {
                 size="lg"
                 className="mt-auto w-full bg-emerald-800 text-white hover:bg-emerald-900"
               >
-                <Link to="/farmer" target="_blank" rel="noopener noreferrer">
+                <Link to="/farmer/login" target="_blank" rel="noopener noreferrer">
                   Open Farmer Dashboard <ArrowRight className="size-4" />
                 </Link>
               </Button>
@@ -155,12 +155,7 @@ export function PresentationHome() {
                 size="lg"
                 className="mt-auto w-full bg-blue-500 text-white hover:bg-blue-600"
               >
-                <Link
-                  to="/admin/$section"
-                  params={{ section: "dashboard" }}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+                <Link to="/government/login" target="_blank" rel="noopener noreferrer">
                   Open Government Dashboard <ArrowRight className="size-4" />
                 </Link>
               </Button>

@@ -32,6 +32,9 @@ class AuthTests(unittest.TestCase):
             self.assertEqual(c.post("/api/auth/register", json={**credentials, "role": "operator"}).status_code, 422)
             registered = c.post("/api/auth/register", json=credentials)
             self.assertEqual(registered.status_code, 201)
+            login = {"username": credentials["username"], "password": credentials["password"]}
+            self.assertEqual(c.post('/api/auth/login', json={**login, 'portal':'staff'}).status_code, 403)
+            self.assertEqual(c.post('/api/auth/login', json={**login, 'portal':'farmer'}).status_code, 200)
             a = {"Authorization": f'Bearer {registered.json()["token"]}'}
             self.assertEqual(c.get("/api/farmers/me", headers=a).json()["name"], "Alice")
             self.assertEqual(c.get("/api/farmers/me/crops", headers=a).json(), [])
@@ -63,6 +66,8 @@ class AuthTests(unittest.TestCase):
                 create_account(db, "operator-a", "operator-password-123", "Operator", "operator", "mandi-a")
             response = c.post("/api/auth/login", json=dict(username="operator-a", password="operator-password-123"))
             self.assertEqual(response.status_code, 200)
+            self.assertEqual(c.post('/api/auth/login', json=dict(username='operator-a',password='operator-password-123',portal='farmer')).status_code,403)
+            self.assertEqual(c.post('/api/auth/login', json=dict(username='operator-a',password='operator-password-123',portal='staff')).status_code,200)
             headers = {"Authorization": f'Bearer {response.json()["token"]}'}
             self.assertEqual(c.get("/api/queues/mandi-a", headers=headers).status_code, 200)
             self.assertEqual(c.get("/api/queues/mandi-b", headers=headers).status_code, 403)

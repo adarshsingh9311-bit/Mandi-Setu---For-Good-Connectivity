@@ -1,6 +1,7 @@
 import hashlib
 import sqlite3
 import time
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -14,6 +15,7 @@ class Credentials(BaseModel):
     model_config = ConfigDict(extra="forbid")
     username: str = Field(min_length=3, max_length=80, pattern=r"^[a-zA-Z0-9_.-]+$")
     password: str = Field(min_length=12, max_length=128)
+    portal: Literal["farmer", "staff"] | None = None
 
 
 class Registration(Credentials):
@@ -55,9 +57,13 @@ def login(payload: Credentials):
             error = True
         else:
             db.execute("DELETE FROM login_attempts WHERE username = ?", (username,))
-            token = new_session(db, row["id"])
             assigned = db.execute('SELECT role FROM account_roles WHERE account_id=?',(row['id'],)).fetchone()
             user = dict(id=row["id"], username=username, role=assigned['role'] if assigned else row["role"], centreId=row["centre_id"])
+            if payload.portal == 'staff' and user['role'] == 'farmer':
+                raise HTTPException(403, 'Use the Farmer Login for this account')
+            if payload.portal == 'farmer' and user['role'] != 'farmer':
+                raise HTTPException(403, 'Use the Government Login for this account')
+            token = new_session(db, row["id"])
             error = False
     if error:
         raise HTTPException(401, "Invalid username or password")
