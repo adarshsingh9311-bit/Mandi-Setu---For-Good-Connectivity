@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { apiGet, apiRequest } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 
@@ -115,8 +115,16 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (!user)
     return (
       <main className="mx-auto max-w-md space-y-4 p-8">
+        <Link to="/" className="text-sm font-semibold text-primary">
+          ← MandiSetu presentation home
+        </Link>
         <h1 className="text-2xl font-bold">
-          KisanSetu · {register ? "Create farmer account" : "Sign in"}
+          MandiSetu ·{" "}
+          {register
+            ? "Create farmer account"
+            : path.startsWith("/admin") || path === "/operator"
+              ? "Government / Mandi sign in"
+              : "Farmer sign in"}
         </h1>
         <form onSubmit={submit} className="space-y-4">
           {register && (
@@ -181,6 +189,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={user}>
       <div className="flex items-center justify-end gap-3 border-b p-2 text-sm">
+        <Link to="/" className="font-semibold text-primary">
+          Presentation home
+        </Link>
         <span>
           {user.username} · {user.role}
         </span>

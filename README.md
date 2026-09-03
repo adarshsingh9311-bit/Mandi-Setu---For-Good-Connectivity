@@ -142,6 +142,16 @@ operators use `/admin/queue` (the existing `/operator` remains available).
 
 ## Run the complete local website
 
+The public homepage is the shared SIH presentation hub. It offers Farmer Dashboard
+and Government Dashboard buttons and a five-step presentation walkthrough. Each
+dashboard opens in its own tab so farmer and officer sessions remain separate while
+using the same website, backend and database. Protected pages still require the correct
+account role. A Presentation home link returns from either login/dashboard.
+
+Before presenting, create a farmer account and provision a staff account using the
+instructions below. Keep both servers running. No demonstration accounts, bookings or
+statistics are created automatically by the presentation homepage.
+
 After installing the frontend dependencies and the backend virtual environment described above:
 
 ```powershell

@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -128,17 +129,22 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const publicHome = useRouterState({ select: (state) => state.location.pathname === "/" });
 
   return (
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
-        <AuthGate>
-          <DemoProvider>
-            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-            <Outlet />
-            <Toaster richColors position="top-center" />
-          </DemoProvider>
-        </AuthGate>
+        {publicHome ? (
+          <Outlet />
+        ) : (
+          <AuthGate>
+            <DemoProvider>
+              {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+              <Outlet />
+              <Toaster richColors position="top-center" />
+            </DemoProvider>
+          </AuthGate>
+        )}
       </I18nProvider>
     </QueryClientProvider>
   );
