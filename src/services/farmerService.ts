@@ -1,14 +1,24 @@
-// Mock implementation — API ready.
 import { currentFarmer, farmers, type Crop, type Farmer } from "@/data/mockData";
+import { apiGet, apiRequest } from "@/lib/api";
+
+export type FarmerProfile = typeof currentFarmer;
+export type CropInput = Omit<Crop, "id" | "status"> & { language: string };
 
 export const farmerService = {
   async getProfile() {
-    return currentFarmer;
+    return apiGet<FarmerProfile>("/api/farmers/me");
   },
   async listFarmers(): Promise<Farmer[]> {
     return farmers;
   },
-  async addCrop(crop: Omit<Crop, "id" | "status">): Promise<Crop> {
-    return { ...crop, id: `crop-${Date.now()}`, status: "Not Scheduled" };
+  async listCrops(): Promise<Crop[]> {
+    return apiGet<Crop[]>("/api/farmers/me/crops");
+  },
+  async addCrop(crop: CropInput): Promise<Crop> {
+    return apiRequest<Crop>("/api/farmers/me/crops", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(crop),
+    });
   },
 };

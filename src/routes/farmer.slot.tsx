@@ -1,122 +1,183 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, Sparkles } from "lucide-react";
-import { toast } from "sonner";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FarmerShell } from "@/components/farmer/FarmerShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useDemo } from "@/lib/demoStore";
-import { useI18n } from "@/lib/i18n";
 import { procurementService } from "@/services/procurementService";
-import { predictionService } from "@/services/predictionService";
-import { notificationService } from "@/services/notificationService";
-import { cn } from "@/lib/utils";
-
-export const Route = createFileRoute("/farmer/slot")({
-  component: SlotPage,
-});
-
+export const Route = createFileRoute("/farmer/slot")({ component: SlotPage });
 function SlotPage() {
-  const { t } = useI18n();
-  const { centres, booking, setBooking, crops, pushNotification } = useDemo();
-  const navigate = useNavigate();
-  const centre = centres.find((c) => c.id === booking.centreId) ?? centres[0]!;
-  const crop = crops[0]!;
-  const [selectedSlot, setSelectedSlot] = useState("s1");
-
-  const { data: processingMin = 42 } = useQuery({
-    queryKey: ["processing", crop.quantity],
-    queryFn: () => predictionService.predictProcessingTime(crop.quantity),
+  const {
+    centres,
+    booking,
+    crops,
+    farmerLoading,
+    farmerError,
+    reloadFarmer,
+    savedBooking,
+    bookingError,
+    reloadBooking,
+  } = useDemo();
+  const [day, setDay] = useState(() =>
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(Date.now() + 86400000)),
+  );
+  const [cropId, setCropId] = useState("");
+  const [slotId, setSlotId] = useState("");
+  const client = useQueryClient();
+  const centre = centres.find((c) => c.id === booking.centreId);
+  const eligible = crops.filter((c) => centre?.crops.includes(c.type));
+  const selectedCrop = eligible.find((c) => c.id === cropId) ?? eligible[0];
+  const slots = useQuery({
+    queryKey: ["booking-slots", booking.centreId, day],
+    queryFn: () => procurementService.getSlots(booking.centreId, day),
+    enabled: !!day,
+    retry: false,
+    refetchInterval: 15000,
   });
-
-  const { data: slots = [] } = useQuery({
-    queryKey: ["slots", centre.id, processingMin],
-    queryFn: () => procurementService.getSlots(centre.id, processingMin),
+  const mutation = useMutation({
+    mutationFn: async (cancel: boolean) => {
+      if (cancel) return procurementService.cancel();
+      if (!selectedCrop) throw new Error("Choose a crop first");
+      return procurementService.confirmSlot({
+        centreId: booking.centreId,
+        cropId: selectedCrop.id,
+        day,
+        slotId,
+      });
+    },
+    onSuccess: async () => {
+      await Promise.all([reloadBooking(), reloadFarmer()]);
+    },
+    onSettled: async () => {
+      await client.invalidateQueries({ queryKey: ["booking-slots"] });
+    },
   });
-
-  const confirm = async () => {
-    const slot = slots.find((s) => s.id === selectedSlot);
-    await procurementService.confirmSlot(centre.id, selectedSlot);
-    setBooking({ centreId: centre.id, slot: slot?.window.split(" – ")[0] ?? "11:30 AM", status: "Confirmed" });
-    pushNotification(
-      notificationService.create("slot", "Slot Confirmed", `Your procurement slot is confirmed for ${slot?.window}.`),
-    );
-    toast.success("Slot confirmed", { description: slot?.window });
-    void navigate({ to: "/farmer/track" });
-  };
-
   return (
-    <FarmerShell title="Dynamic Slot" back="/farmer/procurement">
-      <Card>
-        <CardContent className="space-y-4 p-4">
-          <div>
-            <p className="text-sm text-muted-foreground">Selected centre</p>
-            <h2 className="text-lg font-bold">{centre.name}</h2>
-          </div>
-          <dl className="grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-lg bg-muted px-3 py-2">
-              <dt className="text-xs text-muted-foreground">Your crop</dt>
-              <dd className="font-semibold">{crop.type}</dd>
-            </div>
-            <div className="rounded-lg bg-muted px-3 py-2">
-              <dt className="text-xs text-muted-foreground">Quantity</dt>
-              <dd className="font-semibold">
-                {crop.quantity} {crop.unit}
-              </dd>
-            </div>
-          </dl>
-        </CardContent>
-      </Card>
-
-      <Card className="mt-4 border-status-info/25 bg-status-info-soft/50">
-        <CardContent className="flex items-center justify-between p-4">
-          <div>
-            <p className="flex items-center gap-1.5 text-sm font-medium">
-              <Sparkles className="size-4 text-status-info" aria-hidden="true" /> AI Estimated Processing Time
-            </p>
-            <p className="text-2xl font-bold text-status-info">{processingMin} minutes</p>
-          </div>
-          <span className="text-[11px] font-medium text-muted-foreground">ML prediction — demo</span>
-        </CardContent>
-      </Card>
-
-      <section className="mt-5" aria-labelledby="slots">
-        <h2 id="slots" className="mb-3 text-base font-bold">
-          Recommended Slot
-        </h2>
-        <div className="space-y-3">
-          {slots.map((slot) => (
-            <button
-              key={slot.id}
-              type="button"
-              onClick={() => setSelectedSlot(slot.id)}
-              aria-pressed={selectedSlot === slot.id}
-              className={cn(
-                "card-surface w-full p-4 text-left transition-colors",
-                selectedSlot === slot.id && "border-primary bg-status-normal-soft",
-              )}
+    <FarmerShell title="Book procurement slot" back="/farmer/procurement">
+      {bookingError && (
+        <p role="alert">
+          {bookingError}
+          <Button onClick={() => void reloadBooking()}>Retry</Button>
+        </p>
+      )}
+      {savedBooking && (
+        <Card>
+          <CardContent className="space-y-3 p-4">
+            <h2 className="font-bold">Confirmed booking</h2>
+            <p>{centres.find((c) => c.id === savedBooking.centreId)?.name}</p>
+            <p>{savedBooking.slot}</p>
+            <Button
+              variant="outline"
+              disabled={mutation.isPending}
+              onClick={() => mutation.mutate(true)}
             >
-              <div className="flex items-center justify-between">
-                <span className="text-lg font-bold">{slot.window}</span>
-                {slot.recommended ? (
-                  <span className="rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">
-                    Recommended
-                  </span>
-                ) : (
-                  selectedSlot === slot.id && <CheckCircle2 className="size-5 text-primary" aria-hidden="true" />
-                )}
-              </div>
-              {slot.reason && <p className="mt-1.5 text-sm text-muted-foreground">{slot.reason}</p>}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <Button size="lg" className="mt-5 w-full" onClick={() => void confirm()}>
-        {t("confirmSlot")}
+              Cancel booking
+            </Button>
+            <p className="text-sm">Confirming a new slot will replace this booking.</p>
+          </CardContent>
+        </Card>
+      )}
+      <h2 className="mt-4 font-bold">{centre?.name}</h2>
+      {farmerLoading && <p role="status">Loading crops…</p>}
+      {farmerError && (
+        <p role="alert">
+          {farmerError}
+          <Button onClick={() => void reloadFarmer()}>Retry</Button>
+        </p>
+      )}
+      {!farmerLoading && !farmerError && !eligible.length && (
+        <p>
+          No registered crops are accepted here. <Link to="/farmer/crop">Register a crop</Link> or
+          choose another centre.
+        </p>
+      )}
+      <label htmlFor="booking-crop" className="mt-4 block">
+        Crop
+      </label>
+      <select
+        id="booking-crop"
+        className="w-full rounded border p-2"
+        value={selectedCrop?.id ?? ""}
+        disabled={mutation.isPending}
+        onChange={(e) => setCropId(e.target.value)}
+      >
+        {eligible.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.type} · {c.quantity} {c.unit}
+          </option>
+        ))}
+      </select>
+      <label htmlFor="booking-date" className="mt-4 block">
+        Date (India time)
+      </label>
+      <input
+        id="booking-date"
+        type="date"
+        className="w-full rounded border p-2"
+        value={day}
+        disabled={mutation.isPending}
+        onChange={(e) => {
+          setDay(e.target.value);
+          setSlotId("");
+          mutation.reset();
+        }}
+      />
+      {slots.isFetching && <p role="status">Checking availability…</p>}
+      {slots.isError && (
+        <p role="alert">
+          {slots.error.message}
+          <Button onClick={() => void slots.refetch()}>Retry</Button>
+        </p>
+      )}
+      <div className="mt-4 space-y-2">
+        {slots.data?.map((s) => (
+          <Button
+            key={s.id}
+            className="w-full"
+            variant={slotId === s.id ? "default" : "outline"}
+            aria-pressed={slotId === s.id}
+            disabled={!s.available || mutation.isPending}
+            onClick={() => {
+              setSlotId(s.id);
+              mutation.reset();
+            }}
+          >
+            {s.window} · {s.available ? `${s.remaining} places available` : "Unavailable"}
+          </Button>
+        ))}
+      </div>
+      <Button
+        className="mt-4 w-full"
+        disabled={
+          mutation.isPending ||
+          farmerLoading ||
+          !!farmerError ||
+          !!bookingError ||
+          !selectedCrop ||
+          !day ||
+          slots.isError ||
+          !slots.data?.some((s) => s.id === slotId && s.available)
+        }
+        onClick={() => mutation.mutate(false)}
+      >
+        {mutation.isPending ? "Saving…" : "Confirm slot"}
       </Button>
-      <p className="mt-2 text-center text-xs text-muted-foreground">ML prediction — demonstration data</p>
+      {mutation.isError && (
+        <p role="alert" className="mt-3">
+          {mutation.error.message}
+        </p>
+      )}
+      {mutation.isSuccess && (
+        <p role="status" className="mt-3">
+          Booking updated successfully.
+        </p>
+      )}
     </FarmerShell>
   );
 }

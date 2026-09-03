@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { DemoProvider } from "../lib/demoStore";
 import { I18nProvider } from "../lib/i18n";
+import { AuthGate } from "../lib/auth";
 import { Toaster } from "../components/ui/sonner";
 
 function NotFoundComponent() {
@@ -80,11 +81,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-       { title: "KisanSetu — Smarter Procurement" },
-       { name: "description", content: "Coordinate crop procurement with live queues, smart slots and disruption recovery." },
-       { name: "author", content: "KisanSetu" },
-       { property: "og:title", content: "KisanSetu — Smarter Procurement" },
-       { property: "og:description", content: "A connected procurement coordination experience for farmers, centres and government teams." },
+      { title: "KisanSetu — Smarter Procurement" },
+      {
+        name: "description",
+        content:
+          "Coordinate crop procurement with live queues, smart slots and disruption recovery.",
+      },
+      { name: "author", content: "KisanSetu" },
+      { property: "og:title", content: "KisanSetu — Smarter Procurement" },
+      {
+        property: "og:description",
+        content:
+          "A connected procurement coordination experience for farmers, centres and government teams.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
@@ -123,11 +132,13 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
-        <DemoProvider>
-          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-          <Outlet />
-          <Toaster richColors position="top-center" />
-        </DemoProvider>
+        <AuthGate>
+          <DemoProvider>
+            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+            <Outlet />
+            <Toaster richColors position="top-center" />
+          </DemoProvider>
+        </AuthGate>
       </I18nProvider>
     </QueryClientProvider>
   );

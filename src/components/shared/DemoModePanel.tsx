@@ -10,8 +10,11 @@ const scenarios: { id: ScenarioId; title: string; detail: string }[] = [
   { id: "overload", title: "1 — Centre Overload", detail: "Mandi A: Normal → Overloaded (174%)" },
   { id: "weather", title: "2 — Weather Delay", detail: "Normal ETA → Delayed ETA" },
   { id: "vehicle", title: "3 — Vehicle Problem", detail: "On-time → Missed slot risk" },
-  { id: "queue", title: "4 — Queue Progress", detail: "18 farmers ahead → 10" },
-  { id: "alternative", title: "5 — Alternative Mandi", detail: "Mandi A overloaded → Mandi B recommended" },
+  {
+    id: "alternative",
+    title: "5 — Alternative Mandi",
+    detail: "Mandi A overloaded → Mandi B recommended",
+  },
 ];
 
 export function DemoModePanel() {
@@ -25,9 +28,16 @@ export function DemoModePanel() {
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-sm font-bold">SIH Demo Mode</h2>
-              <p className="text-xs text-muted-foreground">Drive the prototype with local scenarios.</p>
+              <p className="text-xs text-muted-foreground">
+                Drive the prototype with local scenarios.
+              </p>
             </div>
-            <Button variant="ghost" size="icon" aria-label="Close demo panel" onClick={() => setOpen(false)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Close demo panel"
+              onClick={() => setOpen(false)}
+            >
               <X className="size-4" />
             </Button>
           </div>

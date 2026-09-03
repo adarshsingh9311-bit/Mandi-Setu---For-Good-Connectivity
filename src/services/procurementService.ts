@@ -1,34 +1,36 @@
-// Mock implementation — API ready.
+import { apiGet, apiRequest } from "@/lib/api";
 export interface SlotOption {
   id: string;
   window: string;
-  recommended: boolean;
-  reason?: string;
+  remaining: number;
+  available: boolean;
 }
-
+export interface SavedBooking {
+  centreId: string;
+  cropId: string;
+  day: string;
+  slotId: string;
+  slot: string;
+  status: string;
+}
 export const procurementService = {
-  async getSlots(centreId: string, processingMin: number): Promise<SlotOption[]> {
-    void centreId;
-    void processingMin;
-    return [
-      {
-        id: "s1",
-        window: "10:30 AM – 11:15 AM",
-        recommended: true,
-        reason: "Recommended based on current centre workload and estimated processing requirement.",
-      },
-      { id: "s2", window: "11:30 AM – 12:15 PM", recommended: false },
-      { id: "s3", window: "12:30 PM – 1:15 PM", recommended: false },
-    ];
-  },
-  async confirmSlot(centreId: string, slotId: string) {
-    return { ok: true, centreId, slotId };
-  },
+  getBooking: () => apiGet<SavedBooking | null>("/api/bookings/me"),
+  getSlots: (centreId: string, day: string) =>
+    apiGet<SlotOption[]>(
+      `/api/bookings/slots/${encodeURIComponent(centreId)}?day=${encodeURIComponent(day)}`,
+    ),
+  confirmSlot: (payload: { centreId: string; cropId: string; day: string; slotId: string }) =>
+    apiRequest<SavedBooking>("/api/bookings/me", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  cancel: () => apiRequest<{ ok: boolean }>("/api/bookings/me", { method: "DELETE" }),
   async recoveryOptions() {
     return [
-      { id: "o1", title: "Next available slot", detail: "1:00 PM" },
-      { id: "o2", title: "Nearby eligible centre", detail: "Mandi B" },
-      { id: "o3", title: "Keep current slot", detail: "11:30 AM" },
+      { id: "o1", title: "Next available slot", detail: "Choose a new time" },
+      { id: "o2", title: "Nearby eligible centre", detail: "Choose another centre" },
+      { id: "o3", title: "Keep current slot", detail: "Keep your saved booking" },
     ];
   },
 };

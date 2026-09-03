@@ -1,3 +1,4 @@
+import { CentreWaitEstimate } from "@/components/shared/AIPredictionCard";
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { List, Map as MapIcon, MapPin, Clock } from "lucide-react";
@@ -76,7 +77,9 @@ function ProcurementPage() {
                 <p className="flex items-center gap-1.5 text-sm">
                   <Clock className="size-4 text-muted-foreground" aria-hidden="true" />
                   <span className="text-muted-foreground">{t("estimatedWait")}:</span>
-                  <span className="font-bold">{queueService.formatWait(centre.estimatedWaitMin)}</span>
+                  <span className="font-bold">
+                    <CentreWaitEstimate centreId={centre.id} compact />
+                  </span>
                 </p>
 
                 {centre.status === "normal" ? (

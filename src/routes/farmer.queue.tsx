@@ -1,121 +1,113 @@
+import { AIPredictionCard } from "@/components/shared/AIPredictionCard";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { RefreshCw, Users, LayoutGrid, Clock } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FarmerShell } from "@/components/farmer/FarmerShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { StatusBadge } from "@/components/shared/StatusBadge";
-import { AIPredictionCard } from "@/components/shared/AIPredictionCard";
-import { DemoBadge } from "@/components/shared/DemoBadge";
 import { useDemo } from "@/lib/demoStore";
 import { useI18n } from "@/lib/i18n";
 import { queueService } from "@/services/queueService";
-import { predictionService } from "@/services/predictionService";
-import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/farmer/queue")({
-  component: LiveQueuePage,
-});
-
-const stages = ["Quality Check", "Weighing", "Procurement"];
-
+export const Route = createFileRoute("/farmer/queue")({ component: LiveQueuePage });
+const labels = {
+  queue: "Waiting to be called",
+  grading: "Quality check",
+  weighing: "Weighing",
+  completed: "Completed",
+};
 function LiveQueuePage() {
   const { t } = useI18n();
-  const { centres, booking, queue, refreshQueue } = useDemo();
-  const centre = centres.find((c) => c.id === booking.centreId) ?? centres[0]!;
-
-  const { data: prediction } = useQuery({
-    queryKey: ["wait-prediction", centre.id, queue.farmersAhead, queue.activeCounters],
-    queryFn: () =>
-      predictionService.predictWait({
-        farmersWaiting: queue.farmersAhead,
-        activeCounters: queue.activeCounters,
-        avgProcessingMin: centre.avgProcessingMin,
-        loadPercent: centre.loadPercent,
-      }),
+  const { centres, booking, savedBooking } = useDemo();
+  const selectedCentreId = savedBooking?.centreId ?? booking.centreId;
+  const client = useQueryClient();
+  const query = useQuery({
+    queryKey: ["live-queue", "me"],
+    queryFn: queueService.getQueue,
+    refetchInterval: 5000,
+    retry: false,
   });
-
-  const progress = Math.round(((30 - Math.min(queue.farmersAhead, 30)) / 30) * 100);
-
+  const join = useMutation({
+    mutationFn: () => queueService.join(selectedCentreId),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ["live-queue"] });
+    },
+  });
+  const token = query.data;
+  const centre = centres.find((c) => c.id === (token?.centreId ?? selectedCentreId));
   return (
     <FarmerShell title={t("liveQueue")} back="/farmer">
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <div>
-          <h2 className="text-base font-bold">{centre.name}</h2>
-          <StatusBadge status={centre.status} label="Operational" className="mt-1" />
-        </div>
-        <DemoBadge label="Live Demo Data" />
-      </div>
-
-      <Card className="border-0 bg-brand-gradient text-primary-foreground">
-        <CardContent className="p-6 text-center">
-          <p className="text-sm opacity-90">Your Token</p>
-          <p className="text-5xl font-bold tracking-tight">Token {queue.token}</p>
-          <div className="mt-5 grid grid-cols-2 gap-3 text-left">
-            <div className="rounded-xl bg-primary-foreground/12 p-3">
-              <p className="flex items-center gap-1.5 text-xs opacity-90">
-                <Users className="size-3.5" aria-hidden="true" /> {t("farmersAhead")}
-              </p>
-              <p className="text-2xl font-bold">{queue.farmersAhead}</p>
-            </div>
-            <div className="rounded-xl bg-primary-foreground/12 p-3">
-              <p className="flex items-center gap-1.5 text-xs opacity-90">
-                <LayoutGrid className="size-3.5" aria-hidden="true" /> {t("activeCounters")}
-              </p>
-              <p className="text-2xl font-bold">{queue.activeCounters}</p>
-            </div>
-          </div>
-          <div className="mt-3 rounded-xl bg-primary-foreground/12 p-3 text-left">
-            <p className="flex items-center gap-1.5 text-xs opacity-90">
-              <Clock className="size-3.5" aria-hidden="true" /> {t("estimatedWaiting")}
+      <h2 className="mb-4 text-lg font-bold">{centre?.name}</h2>
+      {query.isPending && <p role="status">Loading queue…</p>}
+      {query.isError && (
+        <p role="alert">
+          Could not refresh the queue.{" "}
+          {query.data ? "Showing the last received status." : "Please retry."}
+        </p>
+      )}
+      {token && (
+        <Card className="mt-4">
+          <CardContent className="space-y-4 p-6">
+            <p className="text-3xl font-bold">Token {token.token}</p>
+            <p className="font-semibold">{labels[token.stage]}</p>
+            <dl className="grid grid-cols-2 gap-4">
+              <div>
+                <dt>Farmers ahead</dt>
+                <dd className="text-2xl font-bold">{token.farmersAhead}</dd>
+              </div>
+              <div>
+                <dt>Active counters</dt>
+                <dd className="text-2xl font-bold">{token.activeCounters}</dd>
+              </div>
+              <div>
+                <dt>Estimated wait to be called</dt>
+                <dd>
+                  {token.estimatedWaitMin === null
+                    ? "Unavailable"
+                    : queueService.formatWait(token.estimatedWaitMin)}
+                </dd>
+              </div>
+            </dl>
+            <p className="text-sm text-muted-foreground">
+              Token updated: {new Date(token.lastUpdated).toLocaleString()}
             </p>
-            <p className="text-2xl font-bold">
-              {queueService.formatWait(prediction?.predictedMin ?? centre.estimatedWaitMin)}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="mt-4">
-        <CardContent className="space-y-4 p-4">
-          <div>
-            <div className="mb-2 flex items-center justify-between text-sm">
-              <span className="font-semibold">You</span>
-              <span className="text-muted-foreground">{queue.farmersAhead} farmers ahead</span>
-            </div>
-            <Progress value={progress} className="h-3" aria-label="Queue progress" />
-          </div>
-          <ol className="flex items-center justify-between gap-2">
-            {stages.map((stage, i) => (
-              <li key={stage} className="flex flex-1 flex-col items-center gap-1.5 text-center">
-                <span
-                  className={cn(
-                    "flex size-9 items-center justify-center rounded-full text-sm font-bold",
-                    i === 0 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
-                  )}
-                >
-                  {i + 1}
-                </span>
-                <span className="text-xs font-medium">{stage}</span>
-              </li>
-            ))}
-          </ol>
-        </CardContent>
-      </Card>
-
-      {prediction && (
+          </CardContent>
+        </Card>
+      )}
+      {token && (
         <div className="mt-4">
-          <AIPredictionCard prediction={prediction} />
+          <AIPredictionCard prediction={token.prediction} />
         </div>
       )}
-
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground">Last updated: {queue.lastUpdated}</p>
-        <Button variant="outline" onClick={refreshQueue}>
-          <RefreshCw className="size-4" /> {t("refreshQueue")}
-        </Button>
-      </div>
+      {query.isSuccess && (!token || token.stage === "completed") && (
+        <div className="mt-4 space-y-3">
+          <p>
+            {token
+              ? "Your previous visit is complete. You can join a new queue."
+              : "You have no queue token yet."}
+          </p>
+          <Button disabled={join.isPending} onClick={() => join.mutate()}>
+            {join.isPending
+              ? "Joining…"
+              : `Join queue at ${centres.find((c) => c.id === selectedCentreId)?.name ?? selectedCentreId}`}
+          </Button>
+        </div>
+      )}
+      {join.isError && (
+        <p role="alert" className="mt-3">
+          {join.error.message}
+        </p>
+      )}
+      <Button
+        className="mt-4"
+        variant="outline"
+        disabled={query.isFetching}
+        onClick={() => void query.refetch()}
+      >
+        {query.isFetching ? "Refreshing…" : t("refreshQueue")}
+      </Button>
+      <p className="mt-3 text-xs text-muted-foreground">
+        Updates every 5 seconds while this page is open. Queue belongs to your signed-in account.
+      </p>
     </FarmerShell>
   );
 }

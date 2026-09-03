@@ -51,17 +51,8 @@ function AlternativesPage() {
   if (!best) return null;
 
   const switchCentre = () => {
-    setBooking({ centreId: best.id, slot: "12:15 PM", status: "Confirmed" });
-    pushNotification({
-      id: `n-${Date.now()}`,
-      kind: "slot",
-      title: "Centre Switched",
-      body: `You are now scheduled at ${best.name} at 12:15 PM.`,
-      time: "Just now",
-      read: false,
-    });
-    toast.success("Switched centre", { description: best.name });
-    void navigate({ to: "/farmer/track" });
+    setBooking({ centreId: best.id, slot: "—", status: "Slot Pending" });
+    void navigate({ to: "/farmer/slot" });
   };
 
   return (
@@ -70,7 +61,8 @@ function AlternativesPage() {
         <CardContent className="space-y-3 p-4">
           <h2 className="flex items-center gap-2 text-lg font-bold text-status-over">
             <AlertTriangle className="size-5" aria-hidden="true" />
-            {current.name.split(" — ")[0]} {current.status === "over" ? "Has Become Overloaded" : "Is Under Pressure"}
+            {current.name.split(" — ")[0]}{" "}
+            {current.status === "over" ? "Has Become Overloaded" : "Is Under Pressure"}
           </h2>
           <dl className="grid grid-cols-2 gap-3 text-sm">
             <div className="rounded-lg bg-card px-3 py-2">
@@ -129,8 +121,8 @@ function AlternativesPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Confirm centre switch</AlertDialogTitle>
                   <AlertDialogDescription>
-                    KisanSetu never moves you automatically. Confirm that you want your procurement moved to{" "}
-                    {best.name}.
+                    KisanSetu never moves you automatically. Confirm that you want your procurement
+                    moved to {best.name}.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -162,7 +154,8 @@ function AlternativesPage() {
               <div>
                 <h3 className="font-bold">{c.name}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {c.distanceKm} km · {c.loadPercent}% load · {queueService.formatWait(c.estimatedWaitMin)} wait
+                  {c.distanceKm} km · {c.loadPercent}% load ·{" "}
+                  {queueService.formatWait(c.estimatedWaitMin)} wait
                 </p>
               </div>
               <StatusBadge status={c.status} />

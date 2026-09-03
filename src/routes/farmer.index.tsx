@@ -1,3 +1,4 @@
+import { CentreWaitEstimate } from "@/components/shared/AIPredictionCard";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   AlertTriangle,
@@ -18,7 +19,6 @@ import { DemoDataNote } from "@/components/shared/DemoBadge";
 import { RoleSwitcher } from "@/components/shared/RoleSwitcher";
 import { useDemo } from "@/lib/demoStore";
 import { useI18n } from "@/lib/i18n";
-import { currentFarmer } from "@/data/mockData";
 import { queueService } from "@/services/queueService";
 
 export const Route = createFileRoute("/farmer/")({
@@ -34,7 +34,12 @@ const quickActions = [
 
 function FarmerHome() {
   const { t } = useI18n();
-  const { centres, booking } = useDemo();
+  const { centres, savedBooking, bookingError, farmer: currentFarmer } = useDemo();
+  const booking = savedBooking ?? {
+    centreId: "mandi-a",
+    slot: "—",
+    status: bookingError ?? "Not booked",
+  };
   const centre = centres.find((c) => c.id === booking.centreId) ?? centres[0]!;
 
   return (
@@ -75,7 +80,9 @@ function FarmerHome() {
             </div>
             <div className="rounded-xl bg-primary-foreground/12 p-3">
               <dt className="text-xs opacity-90">{t("estimatedWaiting")}</dt>
-              <dd className="text-lg font-bold">{queueService.formatWait(centre.estimatedWaitMin)}</dd>
+              <dd className="text-lg font-bold">
+                <CentreWaitEstimate centreId={centre.id} compact />
+              </dd>
             </div>
           </dl>
 
@@ -122,7 +129,10 @@ function FarmerHome() {
         <Card className="mt-6 border-status-high/40 bg-status-high-soft">
           <CardContent className="space-y-3 p-4">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="mt-0.5 size-5 text-status-high-foreground" aria-hidden="true" />
+              <AlertTriangle
+                className="mt-0.5 size-5 text-status-high-foreground"
+                aria-hidden="true"
+              />
               <div>
                 <h3 className="font-bold">{t("centreLoadIncreased")}</h3>
                 <p className="text-sm text-muted-foreground">{t("centreLoadIncreasedBody")}</p>

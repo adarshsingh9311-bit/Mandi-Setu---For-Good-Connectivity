@@ -1,17 +1,68 @@
 """
 KisanSetu backend — built one domain at a time.
 
-Step 1 (this): health + procurement centres
-Later: farmers/crops → queue → slots → predictions → notifications/recovery
+Step 7: authenticated farmers and centre-scoped operators.
+Opaque sessions expire after eight hours and are revoked on logout.
 """
 
 from fastapi import FastAPI
+from fastapi import Request
+from starlette.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
+from .auth import authenticate, identity
+from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 
 from .models import HealthResponse
 from .routers.centres import router as centres_router
+from .routers.farmers import router as farmers_router
+from .routers.queues import router as queues_router
+from .routers.bookings import router as bookings_router
+from .routers.predictions import router as predictions_router
+from .routers.notifications import router as notifications_router
+from .routers.recovery import router as recovery_router
+from .routers.auth import router as auth_router
+from .routers.admin import router as admin_router
+from .database import initialize
 
-app = FastAPI(title="KisanSetu API", version="0.1.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    initialize()
+    yield
+
+
+app = FastAPI(title="KisanSetu API", version="0.7.0", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def protect_api(request: Request, call_next):
+    path = request.url.path.rstrip("/")
+    public = (request.method == "OPTIONS" or not path.startswith("/api/") or
+              path in ("/api/auth/login", "/api/auth/register") or
+              (request.method == "GET" and (path == "/api/centres" or path.startswith("/api/centres/") or path.startswith("/api/predictions/centres/"))))
+    if public:
+        return await call_next(request)
+    header = request.headers.get("authorization", "")
+    user = await run_in_threadpool(authenticate, header[7:] if header.startswith("Bearer ") else None)
+    if user is None:
+        return JSONResponse({"detail": "Sign in to continue"}, status_code=401)
+    if path.startswith('/api/admin/'):
+        if user['role'] not in ('operator','government','super_admin'):
+            return JSONResponse({'detail':'Staff account required'},status_code=403)
+        if user['role']=='operator' and path.split('/')[3] not in ('mandis','queue','slots'):
+            return JSONResponse({'detail':'Government officer access required'},status_code=403)
+    elif path.startswith("/api/queues/") and path != "/api/queues/me" and not path.endswith("/join"):
+        centre = path.split("/")[3]
+        if user['role'] not in ('government','super_admin') and (user["role"] != "operator" or user["centreId"] != centre):
+            return JSONResponse({"detail": "Operator access for this centre is required"}, status_code=403)
+    elif not path.startswith("/api/auth/") and user["role"] != "farmer":
+        return JSONResponse({"detail": "Farmer account required"}, status_code=403)
+    request.state.user = user
+    context_token = identity.set(user)
+    try:
+        return await call_next(request)
+    finally:
+        identity.reset(context_token)
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,8 +81,16 @@ app.add_middleware(
 )
 
 app.include_router(centres_router)
+app.include_router(farmers_router)
+app.include_router(queues_router)
+app.include_router(bookings_router)
+app.include_router(predictions_router)
+app.include_router(notifications_router)
+app.include_router(recovery_router)
+app.include_router(auth_router)
+app.include_router(admin_router)
 
 
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
-    return HealthResponse(step=1)
+    return HealthResponse(step=7)

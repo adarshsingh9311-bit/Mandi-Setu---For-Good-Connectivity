@@ -19,7 +19,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useDemo } from "@/lib/demoStore";
 import { useI18n, languages } from "@/lib/i18n";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -42,7 +48,7 @@ type FormValues = z.input<typeof schema>;
 
 function MyCropPage() {
   const { t } = useI18n();
-  const { crops, centres, addCrop } = useDemo();
+  const { crops, centres, addCrop, farmerLoading, farmerError, reloadFarmer } = useDemo();
   const [open, setOpen] = useState(false);
 
   const form = useForm<FormValues>({
@@ -58,24 +64,39 @@ function MyCropPage() {
     },
   });
 
-  const onSubmit = form.handleSubmit((values) => {
-    addCrop({
-      id: `crop-${Date.now()}`,
-      type: values.type,
-      quantity: Number(values.quantity),
-      unit: values.unit,
-      expectedDate: values.expectedDate,
-      preferredCentreId: values.preferredCentreId,
-      transportAvailable: values.transportAvailable,
-      status: "Not Scheduled",
-    });
-    toast.success("Crop registered", { description: `${values.quantity} ${values.unit} of ${values.type}` });
-    setOpen(false);
-    form.reset();
+  const onSubmit = form.handleSubmit(async (values) => {
+    try {
+      await addCrop({
+        type: values.type,
+        quantity: Number(values.quantity),
+        unit: values.unit,
+        expectedDate: values.expectedDate,
+        preferredCentreId: values.preferredCentreId,
+        transportAvailable: values.transportAvailable,
+        language: values.language,
+      });
+      toast.success("Crop registered", {
+        description: `${values.quantity} ${values.unit} of ${values.type}`,
+      });
+      setOpen(false);
+      form.reset();
+    } catch (error) {
+      toast.error("Crop was not saved", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   });
 
   return (
     <FarmerShell title={t("myCrop")} back="/farmer">
+      {farmerLoading && <p role="status">Loading your crops…</p>}
+      {farmerError && (
+        <div role="alert">
+          <p>{farmerError}</p>
+          <Button onClick={() => void reloadFarmer()}>Retry</Button>
+        </div>
+      )}
+      {!farmerLoading && !farmerError && crops.length === 0 && <p>No crops registered yet.</p>}
       <div className="space-y-3">
         {crops.map((crop) => {
           const centre = centres.find((c) => c.id === crop.preferredCentreId);
@@ -117,14 +138,16 @@ function MyCropPage() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button size="lg" className="mt-4 w-full">
+          <Button size="lg" className="mt-4 w-full" disabled={farmerLoading || !!farmerError}>
             <Plus className="size-4" /> {t("addCrop")}
           </Button>
         </DialogTrigger>
         <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Crop Registration</DialogTitle>
-            <DialogDescription>Demonstration form — data stays on this device.</DialogDescription>
+            <DialogDescription>
+              Register your crop and preferred procurement centre.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-1.5">
@@ -180,7 +203,9 @@ function MyCropPage() {
               <Label htmlFor="centre">Preferred centre</Label>
               <Select
                 defaultValue={form.getValues("preferredCentreId")}
-                onValueChange={(v) => form.setValue("preferredCentreId", v, { shouldValidate: true })}
+                onValueChange={(v) =>
+                  form.setValue("preferredCentreId", v, { shouldValidate: true })
+                }
               >
                 <SelectTrigger id="centre">
                   <SelectValue />
@@ -223,8 +248,13 @@ function MyCropPage() {
               </Select>
             </div>
 
-            <Button type="submit" size="lg" className="w-full">
-              Save crop
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={form.formState.isSubmitting}
+            >
+              {form.formState.isSubmitting ? "Saving…" : "Save crop"}
             </Button>
           </form>
         </DialogContent>

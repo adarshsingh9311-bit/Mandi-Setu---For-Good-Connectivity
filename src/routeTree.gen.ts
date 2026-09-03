@@ -10,8 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as FarmerRouteImport } from './routes/farmer'
 import { Route as OperatorRouteImport } from './routes/operator'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminSectionRouteImport } from './routes/admin.$section'
 import { Route as FarmerIndexRouteImport } from './routes/farmer.index'
 import { Route as FarmerAlternativesRouteImport } from './routes/farmer.alternatives'
 import { Route as FarmerCropRouteImport } from './routes/farmer.crop'
@@ -28,6 +31,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FarmerRoute = FarmerRouteImport.update({
   id: '/farmer',
   path: '/farmer',
@@ -37,6 +45,16 @@ const OperatorRoute = OperatorRouteImport.update({
   id: '/operator',
   path: '/operator',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSectionRoute = AdminSectionRouteImport.update({
+  id: '/$section',
+  path: '/$section',
+  getParentRoute: () => AdminRoute,
 } as any)
 const FarmerIndexRoute = FarmerIndexRouteImport.update({
   id: '/',
@@ -91,8 +109,10 @@ const FarmerTrackRoute = FarmerTrackRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/farmer': typeof FarmerRouteWithChildren
   '/operator': typeof OperatorRoute
+  '/admin/$section': typeof AdminSectionRoute
   '/farmer/alternatives': typeof FarmerAlternativesRoute
   '/farmer/crop': typeof FarmerCropRoute
   '/farmer/notifications': typeof FarmerNotificationsRoute
@@ -102,11 +122,13 @@ export interface FileRoutesByFullPath {
   '/farmer/report-delay': typeof FarmerReportDelayRoute
   '/farmer/slot': typeof FarmerSlotRoute
   '/farmer/track': typeof FarmerTrackRoute
+  '/admin/': typeof AdminIndexRoute
   '/farmer/': typeof FarmerIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/operator': typeof OperatorRoute
+  '/admin/$section': typeof AdminSectionRoute
   '/farmer/alternatives': typeof FarmerAlternativesRoute
   '/farmer/crop': typeof FarmerCropRoute
   '/farmer/notifications': typeof FarmerNotificationsRoute
@@ -116,13 +138,16 @@ export interface FileRoutesByTo {
   '/farmer/report-delay': typeof FarmerReportDelayRoute
   '/farmer/slot': typeof FarmerSlotRoute
   '/farmer/track': typeof FarmerTrackRoute
+  '/admin': typeof AdminIndexRoute
   '/farmer': typeof FarmerIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/farmer': typeof FarmerRouteWithChildren
   '/operator': typeof OperatorRoute
+  '/admin/$section': typeof AdminSectionRoute
   '/farmer/alternatives': typeof FarmerAlternativesRoute
   '/farmer/crop': typeof FarmerCropRoute
   '/farmer/notifications': typeof FarmerNotificationsRoute
@@ -132,14 +157,17 @@ export interface FileRoutesById {
   '/farmer/report-delay': typeof FarmerReportDelayRoute
   '/farmer/slot': typeof FarmerSlotRoute
   '/farmer/track': typeof FarmerTrackRoute
+  '/admin/': typeof AdminIndexRoute
   '/farmer/': typeof FarmerIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/farmer'
     | '/operator'
+    | '/admin/$section'
     | '/farmer/alternatives'
     | '/farmer/crop'
     | '/farmer/notifications'
@@ -149,11 +177,13 @@ export interface FileRouteTypes {
     | '/farmer/report-delay'
     | '/farmer/slot'
     | '/farmer/track'
+    | '/admin/'
     | '/farmer/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/operator'
+    | '/admin/$section'
     | '/farmer/alternatives'
     | '/farmer/crop'
     | '/farmer/notifications'
@@ -163,12 +193,15 @@ export interface FileRouteTypes {
     | '/farmer/report-delay'
     | '/farmer/slot'
     | '/farmer/track'
+    | '/admin'
     | '/farmer'
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/farmer'
     | '/operator'
+    | '/admin/$section'
     | '/farmer/alternatives'
     | '/farmer/crop'
     | '/farmer/notifications'
@@ -178,11 +211,13 @@ export interface FileRouteTypes {
     | '/farmer/report-delay'
     | '/farmer/slot'
     | '/farmer/track'
+    | '/admin/'
     | '/farmer/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
   FarmerRoute: typeof FarmerRouteWithChildren
   OperatorRoute: typeof OperatorRoute
 }
@@ -194,6 +229,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/farmer': {
@@ -209,6 +251,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/operator'
       preLoaderRoute: typeof OperatorRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/$section': {
+      id: '/admin/$section'
+      path: '/$section'
+      fullPath: '/admin/$section'
+      preLoaderRoute: typeof AdminSectionRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/farmer/': {
       id: '/farmer/'
@@ -283,6 +339,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteChildren {
+  AdminSectionRoute: typeof AdminSectionRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminSectionRoute: AdminSectionRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 interface FarmerRouteChildren {
   FarmerAlternativesRoute: typeof FarmerAlternativesRoute
   FarmerCropRoute: typeof FarmerCropRoute
@@ -314,6 +382,7 @@ const FarmerRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
   FarmerRoute: FarmerRouteWithChildren,
   OperatorRoute: OperatorRoute,
 }

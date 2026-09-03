@@ -1,17 +1,27 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useAuth } from "@/lib/auth";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   centres as fallbackCentres,
-  initialCrops,
-  initialNotifications,
+  currentFarmer,
   journeySteps,
   type AppNotification,
   type Crop,
   type ProcurementCentre,
 } from "@/data/mockData";
 import { notificationService } from "@/services/notificationService";
+import { farmerService, type FarmerProfile, type CropInput } from "@/services/farmerService";
 import { mandiService, statusFromLoad } from "@/services/mandiService";
+import { procurementService, type SavedBooking } from "@/services/procurementService";
 
-export type ScenarioId = "overload" | "weather" | "vehicle" | "queue" | "alternative";
+export type ScenarioId = "overload" | "weather" | "vehicle" | "alternative";
 
 interface Booking {
   centreId: string;
@@ -29,19 +39,24 @@ interface DemoState {
   centres: ProcurementCentre[];
   booking: Booking;
   setBooking: (b: Booking) => void;
+  savedBooking: SavedBooking | null;
+  bookingError: string | null;
+  reloadBooking: () => Promise<void>;
 
   crops: Crop[];
-  addCrop: (c: Crop) => void;
-
-  queue: { token: string; farmersAhead: number; activeCounters: number; lastUpdated: string };
-  advanceQueue: () => void;
-  refreshQueue: () => void;
+  farmer: FarmerProfile;
+  farmerLoading: boolean;
+  farmerError: string | null;
+  reloadFarmer: () => Promise<void>;
+  addCrop: (c: CropInput) => Promise<void>;
 
   journeyIndex: number;
   advanceJourney: () => void;
   journey: typeof journeySteps;
 
   etaMinutesLate: number;
+  notificationError: string | null;
+  reloadNotifications: () => Promise<void>;
   notifications: AppNotification[];
   unreadCount: number;
   markRead: (id: string) => void;
@@ -51,11 +66,8 @@ interface DemoState {
 
 const DemoContext = createContext<DemoState | null>(null);
 
-function nowLabel() {
-  return new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-}
-
 export function DemoProvider({ children }: { children: ReactNode }) {
+  const user = useAuth();
   const [demoMode, setDemoMode] = useState(false);
   const [activeScenarios, setActiveScenarios] = useState<ScenarioId[]>([]);
   const [sourceCentres, setSourceCentres] = useState<ProcurementCentre[]>(fallbackCentres);
@@ -64,17 +76,104 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void mandiService.listCentres().then(setSourceCentres);
   }, []);
-  const [booking, setBooking] = useState<Booking>({ centreId: "mandi-a", slot: "11:30 AM", status: "Confirmed" });
-  const [crops, setCrops] = useState<Crop[]>(initialCrops);
-  const [queue, setQueue] = useState({
-    token: "#4582",
-    farmersAhead: 18,
-    activeCounters: 3,
-    lastUpdated: "10:42 AM",
+  const [booking, setBooking] = useState<Booking>({
+    centreId: "mandi-a",
+    slot: "—",
+    status: "Not booked",
   });
+  const [savedBooking, setSavedBooking] = useState<SavedBooking | null>(null);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const reloadBooking = useCallback(async () => {
+    try {
+      setSavedBooking(await procurementService.getBooking());
+      setBookingError(null);
+    } catch {
+      setBookingError("Could not load your saved booking.");
+    }
+  }, []);
+  useEffect(() => {
+    if (user.role === "farmer") void reloadBooking();
+  }, [reloadBooking, user.role]);
+  const [crops, setCrops] = useState<Crop[]>([]);
+  const [farmer, setFarmer] = useState<FarmerProfile>({
+    ...currentFarmer,
+    id: user.id,
+    name: user.username,
+    village: "",
+    district: "",
+    state: "",
+    mobile: "",
+    transport: "",
+    history: [],
+  });
+  const [farmerLoading, setFarmerLoading] = useState(true);
+  const [farmerError, setFarmerError] = useState<string | null>(null);
+  const reloadFarmer = useCallback(async () => {
+    setFarmerLoading(true);
+    setFarmerError(null);
+    try {
+      const [profile, savedCrops] = await Promise.all([
+        farmerService.getProfile(),
+        farmerService.listCrops(),
+      ]);
+      setFarmer(profile);
+      setCrops(savedCrops);
+    } catch {
+      setFarmerError("Could not load your farmer data. Please check the connection and retry.");
+    } finally {
+      setFarmerLoading(false);
+    }
+  }, []);
+  useEffect(() => {
+    if (user.role === "farmer") void reloadFarmer();
+  }, [reloadFarmer, user.role]);
   const [journeyIndex, setJourneyIndex] = useState(3);
   const [etaMinutesLate, setEtaMinutesLate] = useState(0);
-  const [notifications, setNotifications] = useState<AppNotification[]>(initialNotifications);
+  const [savedNotifications, setSavedNotifications] = useState<AppNotification[]>([]);
+  const [demoNotifications, setDemoNotifications] = useState<AppNotification[]>([]);
+  const [notificationError, setNotificationError] = useState<string | null>(null);
+  const notifications = useMemo(
+    () => [...demoNotifications, ...savedNotifications],
+    [demoNotifications, savedNotifications],
+  );
+  const reloadNotifications = useCallback(async () => {
+    try {
+      setSavedNotifications(await notificationService.list());
+      setNotificationError(null);
+    } catch {
+      setNotificationError("Could not load notifications. Please retry.");
+    }
+  }, []);
+  useEffect(() => {
+    if (user.role !== "farmer") return;
+    void reloadNotifications();
+    const timer = setInterval(() => void reloadNotifications(), 10000);
+    return () => clearInterval(timer);
+  }, [reloadNotifications, user.role]);
+  const markRead = useCallback(
+    async (id: string) => {
+      if (id.startsWith("n-")) {
+        setDemoNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+        return;
+      }
+      try {
+        await notificationService.markRead(id);
+        await reloadNotifications();
+      } catch {
+        setNotificationError("Could not mark notification read. Please retry.");
+      }
+    },
+    [reloadNotifications],
+  );
+  const markAllRead = useCallback(async () => {
+    try {
+      await notificationService.markAllRead();
+      setDemoNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      await reloadNotifications();
+    } catch {
+      setNotificationError("Could not mark notifications read. Please retry.");
+    }
+  }, [reloadNotifications, user.role]);
 
   const centres = useMemo(
     () =>
@@ -93,7 +192,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   );
 
   const pushNotification = useCallback((n: AppNotification) => {
-    setNotifications((prev) => [n, ...prev]);
+    setDemoNotifications((prev) => [n, ...prev]);
   }, []);
 
   const runScenario = useCallback(
@@ -102,23 +201,32 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       if (id === "overload" || id === "alternative") {
         setLoadOverrides((prev) => ({ ...prev, "mandi-a": 174 }));
         pushNotification(
-          notificationService.create("centre", "Centre Alert", "Mandi A has become overloaded (174% load)."),
+          notificationService.create(
+            "centre",
+            "Centre Alert",
+            "Mandi A has become overloaded (174% load).",
+          ),
         );
       }
       if (id === "weather") {
         setEtaMinutesLate(65);
         pushNotification(
-          notificationService.create("weather", "Weather Alert", "Heavy rainfall may affect your route to Mandi A."),
+          notificationService.create(
+            "weather",
+            "Weather Alert",
+            "Heavy rainfall may affect your route to Mandi A.",
+          ),
         );
       }
       if (id === "vehicle") {
         setEtaMinutesLate(72);
         pushNotification(
-          notificationService.create("recovery", "Slot Risk", "Vehicle problem reported — you may miss your slot."),
+          notificationService.create(
+            "recovery",
+            "Slot Risk",
+            "Vehicle problem reported — you may miss your slot.",
+          ),
         );
-      }
-      if (id === "queue") {
-        setQueue((q) => ({ ...q, farmersAhead: 10, lastUpdated: nowLabel() }));
       }
     },
     [pushNotification],
@@ -134,33 +242,34 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         setActiveScenarios([]);
         setLoadOverrides({});
         setEtaMinutesLate(0);
-        setQueue({ token: "#4582", farmersAhead: 18, activeCounters: 3, lastUpdated: "10:42 AM" });
         setJourneyIndex(3);
-        setBooking({ centreId: "mandi-a", slot: "11:30 AM", status: "Confirmed" });
-        setNotifications(initialNotifications);
+        setDemoNotifications([]);
       },
       centres,
       booking,
       setBooking,
+      savedBooking,
+      bookingError,
+      reloadBooking,
       crops,
-      addCrop: (c) => setCrops((prev) => [...prev, c]),
-      queue,
-      advanceQueue: () =>
-        setQueue((q) => ({ ...q, farmersAhead: Math.max(0, q.farmersAhead - 1), lastUpdated: nowLabel() })),
-      refreshQueue: () =>
-        setQueue((q) => ({
-          ...q,
-          farmersAhead: Math.max(0, q.farmersAhead - 2),
-          lastUpdated: nowLabel(),
-        })),
+      farmer,
+      farmerLoading,
+      farmerError,
+      reloadFarmer,
+      addCrop: async (c) => {
+        const saved = await farmerService.addCrop(c);
+        setCrops((prev) => [...prev, saved]);
+      },
       journeyIndex,
       advanceJourney: () => setJourneyIndex((i) => Math.min(journeySteps.length - 1, i + 1)),
       journey: journeySteps,
       etaMinutesLate,
       notifications,
       unreadCount: notifications.filter((n) => !n.read).length,
-      markRead: (id) => setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n))),
-      markAllRead: () => setNotifications((prev) => prev.map((n) => ({ ...n, read: true }))),
+      markRead,
+      markAllRead,
+      notificationError,
+      reloadNotifications,
       pushNotification,
     }),
     [
@@ -169,11 +278,21 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       runScenario,
       centres,
       booking,
+      savedBooking,
+      bookingError,
+      reloadBooking,
       crops,
-      queue,
+      farmer,
+      farmerLoading,
+      farmerError,
+      reloadFarmer,
       journeyIndex,
       etaMinutesLate,
       notifications,
+      markRead,
+      markAllRead,
+      notificationError,
+      reloadNotifications,
       pushNotification,
     ],
   );

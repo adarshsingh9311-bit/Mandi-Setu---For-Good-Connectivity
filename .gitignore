@@ -36,3 +36,5 @@ __pycache__/
 *.py[cod]
 backend/.venv/
 .venv/
+backend/data/
+exports/

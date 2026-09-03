@@ -1,114 +1,155 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { CloudRain, Truck, Construction, Building2, CircleAlert, CircleDot } from "lucide-react";
-import { toast } from "sonner";
+import { createFileRoute } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FarmerShell } from "@/components/farmer/FarmerShell";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { useDemo } from "@/lib/demoStore";
-import { cn } from "@/lib/utils";
-import { notificationService } from "@/services/notificationService";
-
-export const Route = createFileRoute("/farmer/report-delay")({
-  component: ReportDelayPage,
-});
-
-const reasons = [
-  { id: "weather", label: "Weather", icon: CloudRain },
-  { id: "vehicle", label: "Vehicle Problem", icon: Truck },
-  { id: "road", label: "Road Blockage", icon: Construction },
-  { id: "centre", label: "Centre Problem", icon: Building2 },
-  { id: "other", label: "Other", icon: CircleAlert },
-] as const;
-
-const options = [
-  { id: "o1", title: "Option 1 — Next available slot", detail: "1:00 PM" },
-  { id: "o2", title: "Option 2 — Nearby eligible centre", detail: "Mandi B — 42 min wait" },
-  { id: "o3", title: "Option 3 — Keep current slot", detail: "11:30 AM (risk of missing)" },
-];
-
+import { recoveryService } from "@/services/recoveryService";
+export const Route = createFileRoute("/farmer/report-delay")({ component: ReportDelayPage });
 function ReportDelayPage() {
-  const { booking, setBooking, pushNotification } = useDemo();
-  const navigate = useNavigate();
-  const [reason, setReason] = useState<string | null>(null);
-  const [option, setOption] = useState("o1");
-
-  const submit = () => {
-    if (option === "o1") setBooking({ ...booking, slot: "1:00 PM", status: "Recovery Slot" });
-    if (option === "o2") setBooking({ centreId: "mandi-b", slot: "12:40 PM", status: "Recovery Slot" });
-    pushNotification(
-      notificationService.create("recovery", "Slot Updated", `Recovery applied: ${options.find((o) => o.id === option)?.detail}.`),
-    );
-    toast.success("Recovery option applied");
-    void navigate({ to: "/farmer/track" });
-  };
-
+  const { savedBooking, bookingError, reloadBooking, reloadFarmer, reloadNotifications } =
+    useDemo();
+  const [reason, setReason] = useState("weather");
+  const [arrival, setArrival] = useState("");
+  const [requestId, setRequestId] = useState("");
+  const [selectedId, setSelectedId] = useState("");
+  const client = useQueryClient();
+  const reports = useQuery({
+    queryKey: ["delay-reports"],
+    queryFn: recoveryService.reports,
+    retry: false,
+  });
+  const active = reports.data?.find((r) => r.id === selectedId) ?? reports.data?.[0];
+  const options = useQuery({
+    queryKey: ["recovery-options", active?.id],
+    queryFn: () => recoveryService.options(active!.id),
+    enabled: !!active && !active.resolution,
+    retry: false,
+  });
+  const report = useMutation({
+    mutationFn: () => {
+      const id = requestId || crypto.randomUUID();
+      setRequestId(id);
+      return recoveryService.report({ requestId: id, reason, arrival: `${arrival}:00+05:30` });
+    },
+    onSuccess: async (r) => {
+      setSelectedId(r.id);
+      setRequestId("");
+      await client.invalidateQueries({ queryKey: ["delay-reports"] });
+      await reloadNotifications();
+    },
+  });
+  const apply = useMutation({
+    mutationFn: (id: string) => recoveryService.apply(active!.id, id),
+    onSuccess: async () => {
+      await Promise.all([
+        reloadBooking(),
+        reloadFarmer(),
+        reloadNotifications(),
+        client.invalidateQueries({ queryKey: ["delay-reports"] }),
+      ]);
+    },
+    onSettled: async () => {
+      await client.invalidateQueries({ queryKey: ["recovery-options"] });
+    },
+  });
+  const busy = report.isPending || apply.isPending;
   return (
-    <FarmerShell title="Report Delay" back="/farmer">
-      <h2 className="mb-3 text-base font-bold">What happened?</h2>
-      <div className="grid grid-cols-2 gap-3">
-        {reasons.map((r) => (
-          <button
-            key={r.id}
-            type="button"
-            onClick={() => setReason(r.id)}
-            aria-pressed={reason === r.id}
-            className={cn(
-              "card-surface flex min-h-24 flex-col items-start justify-between p-4 text-left transition-colors",
-              reason === r.id && "border-primary bg-status-normal-soft",
-            )}
-          >
-            <r.icon className="size-6 text-primary" aria-hidden="true" />
-            <span className="text-sm font-semibold">{r.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {reason && (
-        <>
-          <Card className="mt-5">
-            <CardContent className="grid gap-3 p-4 sm:grid-cols-3">
-              <div className="rounded-lg bg-muted px-3 py-2">
-                <p className="text-xs text-muted-foreground">Current Slot</p>
-                <p className="font-bold">{booking.slot}</p>
-              </div>
-              <div className="rounded-lg bg-muted px-3 py-2">
-                <p className="text-xs text-muted-foreground">Estimated Arrival</p>
-                <p className="font-bold">12:35 PM</p>
-              </div>
-              <div className="rounded-lg bg-status-over-soft px-3 py-2">
-                <p className="text-xs text-muted-foreground">Risk</p>
-                <p className="flex items-center gap-1.5 font-bold text-status-over">
-                  <CircleDot className="size-4" aria-hidden="true" /> May miss slot
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <h2 className="mt-6 mb-3 text-base font-bold">Recommended Recovery</h2>
-          <div className="space-y-3">
-            {options.map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                onClick={() => setOption(o.id)}
-                aria-pressed={option === o.id}
-                className={cn(
-                  "card-surface w-full p-4 text-left transition-colors",
-                  option === o.id && "border-primary bg-status-normal-soft",
-                )}
-              >
-                <p className="font-semibold">{o.title}</p>
-                <p className="text-sm text-muted-foreground">{o.detail}</p>
-              </button>
-            ))}
-          </div>
-
-          <Button size="lg" className="mt-4 w-full" onClick={submit}>
-            Select Option
-          </Button>
-        </>
+    <FarmerShell title="Report delay" back="/farmer">
+      {bookingError && (
+        <p role="alert">
+          {bookingError}
+          <Button onClick={() => void reloadBooking()}>Retry</Button>
+        </p>
       )}
+      <p className="mb-4">Current booking: {savedBooking?.slot ?? "No booking"}</p>
+      <label htmlFor="delay-reason" className="block">
+        Reason
+      </label>
+      <select
+        id="delay-reason"
+        className="w-full rounded border p-2"
+        value={reason}
+        disabled={busy}
+        onChange={(e) => {
+          setReason(e.target.value);
+          setRequestId("");
+        }}
+      >
+        {["weather", "vehicle", "road", "centre", "other"].map((r) => (
+          <option key={r}>{r}</option>
+        ))}
+      </select>
+      <label htmlFor="delay-arrival" className="mt-4 block">
+        Expected arrival (India time)
+      </label>
+      <input
+        id="delay-arrival"
+        type="datetime-local"
+        className="w-full rounded border p-2"
+        value={arrival}
+        disabled={busy}
+        onChange={(e) => {
+          setArrival(e.target.value);
+          setRequestId("");
+        }}
+      />
+      <Button
+        className="mt-4"
+        disabled={busy || !savedBooking || !!bookingError || !arrival}
+        onClick={() => report.mutate()}
+      >
+        {report.isPending ? "Saving…" : "Save delay report"}
+      </Button>
+      {report.isError && <p role="alert">{report.error.message}</p>}
+      {reports.isPending && <p role="status">Loading reports…</p>}
+      {reports.isError && (
+        <p role="alert">
+          Could not load reports.<Button onClick={() => void reports.refetch()}>Retry</Button>
+        </p>
+      )}
+      {active && (
+        <section className="mt-6 space-y-3">
+          <h2 className="font-bold">Saved report: {active.reason}</h2>
+          <p>
+            Arrival:{" "}
+            {new Date(active.arrival).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} (India
+            time)
+          </p>
+          {active.resolution ? (
+            <p role="status">Resolved: {active.resolution.booking.slot}</p>
+          ) : (
+            <>
+              <p>
+                Choose an available slot or keep your current booking. Keeping it does not extend
+                the arrival window. Travel time to alternative centres is not included.
+              </p>
+              {options.isFetching && <p role="status">Checking recovery options…</p>}
+              {options.isError && <p role="alert">{options.error.message}</p>}
+              {!options.isError &&
+                options.data?.map((o) => (
+                  <Button
+                    key={o.id}
+                    className="h-auto w-full whitespace-normal"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => apply.mutate(o.id)}
+                  >
+                    {o.title}
+                  </Button>
+                ))}
+              <Button
+                variant="outline"
+                disabled={busy || options.isFetching}
+                onClick={() => void options.refetch()}
+              >
+                Refresh options
+              </Button>
+            </>
+          )}
+        </section>
+      )}
+      {apply.isError && <p role="alert">{apply.error.message}</p>}
     </FarmerShell>
   );
 }
