@@ -112,6 +112,27 @@ export function AuthGate({ children }: { children: ReactNode }) {
       setPending(false);
     }
   }
+  async function demoGovernmentLogin(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPending(true);
+    setError("");
+    const form = new FormData(event.currentTarget);
+    try {
+      const result = await apiRequest<{ user: User; token: string }>("/api/auth/demo-government", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: form.get("demoName") }),
+      });
+      sessionStorage.setItem("kisansetu-session", result.token);
+      client.clear();
+      setUser(result.user);
+      void navigate({ to: "/admin/$section", params: { section: "dashboard" } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Demo login unavailable");
+    } finally {
+      setPending(false);
+    }
+  }
   if (loading)
     return (
       <p role="status" className="p-8">
@@ -133,10 +154,35 @@ export function AuthGate({ children }: { children: ReactNode }) {
               : "Farmer sign in"}
         </h1>
         {staffPortal && (
-          <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-950">
-            Sign in with an authorized Mandi Operator, Government Officer, or Super Admin account.
-            Staff accounts are issued by the system administrator.
-          </p>
+          <>
+            <form
+              onSubmit={demoGovernmentLogin}
+              className="space-y-3 rounded-xl border-2 border-blue-300 bg-blue-50 p-4 text-blue-950"
+            >
+              <h2 className="font-bold">Quick SIH demo access</h2>
+              <p className="text-sm">
+                Enter any name to open the Government Dashboard. No password is needed in local demo
+                mode.
+              </p>
+              <label className="block text-sm font-medium">
+                Your name
+                <input
+                  name="demoName"
+                  required
+                  minLength={2}
+                  maxLength={80}
+                  placeholder="SIH Judge"
+                  className="mt-1 block w-full rounded border border-blue-300 bg-white p-2"
+                />
+              </label>
+              <Button type="submit" disabled={pending} className="w-full">
+                {pending ? "Opening…" : "Open Government Demo"}
+              </Button>
+            </form>
+            <p className="text-center text-xs text-muted-foreground">
+              Or sign in with an issued staff account below.
+            </p>
+          </>
         )}
         <form onSubmit={submit} className="space-y-4">
           {register && (

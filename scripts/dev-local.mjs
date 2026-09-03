@@ -50,7 +50,7 @@ start(
   python,
   ["-B", "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000"],
   resolve(root, "backend"),
-  { ...process.env, MANDISETU_JOBS_ENABLED: "1" },
+  { ...process.env, MANDISETU_JOBS_ENABLED: "1", MANDISETU_DEMO_ACCESS: "1" },
 );
 let ready = false;
 for (let attempt = 0; attempt < 40 && !stopping; attempt++) {

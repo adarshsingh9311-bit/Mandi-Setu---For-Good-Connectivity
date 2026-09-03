@@ -58,7 +58,7 @@ app = FastAPI(title="KisanSetu API", version="0.7.0", lifespan=lifespan)
 async def protect_api(request: Request, call_next):
     path = request.url.path.rstrip("/")
     public = (request.method == "OPTIONS" or not path.startswith("/api/") or
-              path in ("/api/auth/login", "/api/auth/register") or
+              path in ("/api/auth/login", "/api/auth/register", "/api/auth/demo-government") or
               (request.method == "GET" and (path == "/api/centres" or path.startswith("/api/centres/") or path.startswith("/api/predictions/centres/"))))
     if public:
         return await call_next(request)

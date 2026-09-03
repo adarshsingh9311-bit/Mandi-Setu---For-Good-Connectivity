@@ -76,3 +76,16 @@ class AuthTests(unittest.TestCase):
             for _ in range(5):
                 self.assertEqual(c.post("/api/auth/login", json=dict(username="operator-a", password="wrong-password-123")).status_code, 401)
             self.assertEqual(c.post("/api/auth/login", json=dict(username="operator-a", password="operator-password-123")).status_code, 429)
+
+    def test_government_demo_login_is_explicitly_local_only(self):
+        with TestClient(app) as c:
+            with connection() as db:
+                create_account(db, 'sih-officer', 'unused-test-password', 'SIH Officer', 'government')
+            self.assertEqual(c.post('/api/auth/demo-government',json={'name':'SIH Judge'}).status_code,403)
+            with patch.dict(os.environ,{'MANDISETU_DEMO_ACCESS':'1'}):
+                response=c.post('/api/auth/demo-government',json={'name':'SIH Judge'})
+                self.assertEqual(response.status_code,200,response.text)
+                self.assertEqual(response.json()['user']['role'],'government')
+                headers={'Authorization':'Bearer '+response.json()['token']}
+                self.assertEqual(c.get('/api/admin/dashboard',headers=headers).status_code,200)
+            self.assertEqual(c.post('/api/auth/demo-government',json={'name':'SIH Judge'}).status_code,403)

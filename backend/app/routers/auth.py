@@ -23,6 +23,11 @@ class Registration(Credentials):
     mobile: str = Field(default="", pattern=r"^$|^\+?[0-9][0-9 -]{7,17}$")
 
 
+class DemoGovernmentLogin(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    name: str = Field(min_length=2, max_length=80)
+
+
 @router.post("/register", status_code=201)
 def register(payload: Registration):
     if not payload.name.strip():
@@ -68,6 +73,20 @@ def login(payload: Credentials):
     if error:
         raise HTTPException(401, "Invalid username or password")
     return dict(user=user, token=token)
+
+
+@router.post('/demo-government')
+def demo_government(payload: DemoGovernmentLogin):
+    import os
+    if os.environ.get('MANDISETU_DEMO_ACCESS') != '1':
+        raise HTTPException(403, 'SIH demo access is disabled')
+    with connection() as db:
+        row = db.execute("SELECT a.id, a.centre_id, COALESCE(r.role,a.role) AS role FROM accounts a LEFT JOIN account_roles r ON r.account_id=a.id WHERE a.username='sih-officer'").fetchone()
+        if not row or row['role'] not in ('government','super_admin'):
+            raise HTTPException(503, 'SIH demo officer account is not provisioned')
+        token = new_session(db, row['id'])
+        user = dict(id=row['id'], username=payload.name, role='government', centreId=None)
+        return dict(user=user, token=token, demo=True)
 
 
 @router.get("/me")
