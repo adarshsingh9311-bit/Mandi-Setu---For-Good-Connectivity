@@ -29,6 +29,9 @@ def seed() -> None:
     today = now.date().isoformat()
     future_day = (now.date() + timedelta(days=1)).isoformat()
     with connection() as db:
+        demo_officer = db.execute("SELECT id FROM accounts WHERE username='sih-officer'").fetchone()
+        if not demo_officer:
+            create_account(db, "sih-officer", secrets.token_urlsafe(48), "SIH Demo Officer", "government")
         for index, (username, name, village, district, crop, quantity, centre, status) in enumerate(FARMERS, 1):
             account = db.execute("SELECT id FROM accounts WHERE username=?", (username,)).fetchone()
             if account:
