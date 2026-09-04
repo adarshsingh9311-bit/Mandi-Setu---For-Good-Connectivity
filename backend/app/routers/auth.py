@@ -79,12 +79,22 @@ def login(payload: Credentials):
 @router.post('/demo-government')
 def demo_government(payload: DemoGovernmentLogin):
     import os
+    import secrets
     if os.environ.get('MANDISETU_DEMO_ACCESS') != '1':
         raise HTTPException(403, 'SIH demo access is disabled')
     with connection() as db:
         row = db.execute("SELECT a.id, a.centre_id, COALESCE(r.role,a.role) AS role FROM accounts a LEFT JOIN account_roles r ON r.account_id=a.id WHERE a.username='sih-officer'").fetchone()
-        if not row or row['role'] not in ('government','super_admin'):
-            raise HTTPException(503, 'SIH demo officer account is not provisioned')
+        if not row:
+            create_account(
+                db,
+                'sih-officer',
+                secrets.token_urlsafe(48),
+                'SIH Demo Officer',
+                'government',
+            )
+            row = db.execute("SELECT a.id, a.centre_id, COALESCE(r.role,a.role) AS role FROM accounts a LEFT JOIN account_roles r ON r.account_id=a.id WHERE a.username='sih-officer'").fetchone()
+        if row['role'] not in ('government','super_admin'):
+            raise HTTPException(503, 'SIH demo officer account has an invalid role')
         token = new_session(db, row['id'])
         user = dict(id=row['id'], username=payload.name, role='government', centreId=None)
         return dict(user=user, token=token, demo=True)
