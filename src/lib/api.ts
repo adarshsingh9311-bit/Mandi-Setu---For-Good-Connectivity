@@ -18,7 +18,7 @@ export async function apiRequest<T>(path: string, options?: RequestInit): Promis
     response = await fetch(`${apiBase()}${path}`, {
       ...options,
       headers: { ...options?.headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(30000),
     });
   } catch {
     throw new Error("Cannot reach the server. Make sure the backend is running and try again.");
