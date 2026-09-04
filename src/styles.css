@@ -159,6 +159,7 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: Arial, "Noto Sans", "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 

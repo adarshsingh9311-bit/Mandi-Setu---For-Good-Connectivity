@@ -155,7 +155,7 @@ export function Recovery({ data }: { data: StaffNotifications }) {
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {summaries.map(([label, value]) => (
           <div key={String(label)} className="rounded-lg border p-3">
-            <p className="font-mono text-xl font-semibold">{value}</p>
+            <p className="text-xl font-bold tabular-nums">{value}</p>
             <p className="text-xs text-muted-foreground">{label}</p>
           </div>
         ))}

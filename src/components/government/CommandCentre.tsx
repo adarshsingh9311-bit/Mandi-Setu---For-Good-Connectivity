@@ -240,11 +240,11 @@ function Kpis({ metrics: m }: { metrics: Metrics }) {
         aria-label="Key performance indicators"
       >
         {kpis.map(({ label, value, icon: Icon, tone }) => (
-          <div key={label} className="rounded-xl border bg-card p-4 shadow-sm">
+          <div key={label} className="rounded-lg border bg-card p-4">
             <span className={`flex size-9 items-center justify-center rounded-lg ${tone}`}>
               <Icon className="size-4" />
             </span>
-            <p className="mt-3 break-words font-mono text-2xl font-semibold tracking-tight">
+            <p className="mt-3 break-words text-2xl font-bold tabular-nums">
               {value}
             </p>
             <p className="mt-1 text-xs font-medium">{label}</p>
