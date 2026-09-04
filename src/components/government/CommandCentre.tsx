@@ -182,6 +182,12 @@ export function CommandCentre() {
   );
 }
 function Kpis({ metrics: m }: { metrics: Metrics }) {
+  const waitingTime =
+    m.averageWaitingMin === null
+      ? "Not recorded"
+      : m.averageWaitingMin >= 60
+        ? `${Math.floor(m.averageWaitingMin / 60)}h ${Math.round(m.averageWaitingMin % 60)}m`
+        : `${Math.round(m.averageWaitingMin)} min`;
   const kpis = [
     {
       label: "Total Farmers",
@@ -210,7 +216,7 @@ function Kpis({ metrics: m }: { metrics: Metrics }) {
     },
     {
       label: "Average Waiting Time",
-      value: m.averageWaitingMin === null ? "Not recorded" : m.averageWaitingMin + " min",
+      value: waitingTime,
       icon: Timer,
       tone: "text-amber-700 bg-amber-50",
     },
