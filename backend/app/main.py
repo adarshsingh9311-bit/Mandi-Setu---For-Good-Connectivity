@@ -33,6 +33,11 @@ from .database import initialize
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     initialize()
+    if os.environ.get('MANDISETU_DEMO_ACCESS') == '1':
+        from .database import connection
+        from .government_demo_data import seed_government_dashboard_demo
+        with connection() as db:
+            seed_government_dashboard_demo(db)
     async def operational_jobs():
         from .missed_slots import sweep
         while True:
